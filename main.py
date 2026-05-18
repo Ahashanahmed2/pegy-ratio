@@ -30,6 +30,8 @@ async def home(request: Request):
     <title>PEGY Ratio Calculator</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <meta name="theme-color" content="#3b82f6">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background: #0f172a; color: white; padding: 20px; font-family: Arial; }
@@ -43,7 +45,8 @@ async def home(request: Request):
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th { background: #334155; padding: 12px; text-align: left; }
         td { padding: 12px; border-bottom: 1px solid #334155; }
-        .install-btn { background: #10b981; color: white; padding: 10px 20px; border-radius: 20px; border: none; cursor: pointer; display: none; margin-bottom: 15px; font-size: 14px; }
+        .install-btn { background: #10b981; color: white; padding: 12px 24px; border-radius: 25px; border: none; cursor: pointer; display: none; margin-bottom: 15px; font-size: 16px; font-weight: bold; }
+        .install-btn:hover { background: #059669; }
         h1 { text-align: center; margin-bottom: 25px; }
         h4 { margin-bottom: 20px; }
         .row { display: flex; flex-wrap: wrap; gap: 15px; }
@@ -60,7 +63,7 @@ async def home(request: Request):
         <h1>📊 PEGY Ratio Calculator</h1>
         
         <div style="text-align: center;">
-            <button id="installBtn" class="install-btn">📲 Install App</button>
+            <button id="installBtn" class="install-btn" onclick="installApp()">📲 Install App</button>
         </div>
 
         <div class="card">
@@ -127,28 +130,38 @@ async def home(request: Request):
     </div>
 
     <script>
-        var deferredPrompt;
-        window.addEventListener('beforeinstallprompt', function(e) {
+        // PWA Install
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
             document.getElementById('installBtn').style.display = 'inline-block';
         });
 
-        document.getElementById('installBtn').addEventListener('click', async function() {
+        function installApp() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
-                var result = await deferredPrompt.userChoice;
-                if (result.outcome === 'accepted') {
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('✅ User installed the app');
+                    }
+                    deferredPrompt = null;
                     document.getElementById('installBtn').style.display = 'none';
-                }
-                deferredPrompt = null;
+                });
             }
-        });
+        }
 
+        // Hide button if already installed
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            document.getElementById('installBtn').style.display = 'none';
+        }
+
+        // Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/static/sw.js');
         }
 
+        // Load Records
         async function loadRecords() {
             var res = await fetch('/api/records');
             var records = await res.json();
@@ -174,6 +187,7 @@ async def home(request: Request):
             }).join('');
         }
 
+        // Form Submit
         document.getElementById('pegyForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var btn = this.querySelector('button[type="submit"]');
@@ -211,17 +225,28 @@ async def home(request: Request):
             btn.innerHTML = '📊 Calculate PEGY';
         });
 
+        // Delete Record
         async function deleteRecord(id) {
             if (!confirm('Delete this record?')) return;
             var res = await fetch('/api/records/' + id, { method: 'DELETE' });
             if (res.ok) loadRecords();
         }
 
+        // Initial load
         loadRecords();
     </script>
 </body>
 </html>"""
     return HTMLResponse(content=html)
+
+# ---------------------- Health Check ----------------------
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "message": "PEGY Calculator is running"}
+
+@app.head("/health")
+async def health_check_head():
+    return HTMLResponse(content="", status_code=200)
 
 # ---------------------- API ----------------------
 @app.post("/api/calculate")
@@ -313,6 +338,32 @@ async def delete_record(record_id: str):
 @app.get("/manifest.json")
 async def manifest():
     return FileResponse("static/manifest.json")
+
+# ---------------------- Service Worker ----------------------
+@app.get("/static/sw.js")
+async def service_worker():
+    sw_js = """
+const CACHE_NAME = 'pegy-calc-v2';
+const ASSETS = ['/', '/static/manifest.json'];
+
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    );
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(clients.claim());
+});
+
+self.addEventListener('fetch', (event) => {
+    event.respondWith(
+        caches.match(event.request).then((response) => response || fetch(event.request))
+    );
+});
+"""
+    return HTMLResponse(content=sw_js, media_type="application/javascript")
 
 # ---------------------- Run ----------------------
 if __name__ == "__main__":
