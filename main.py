@@ -36,18 +36,11 @@ async def home(request: Request):
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0f172a; color: white; font-family: Arial, sans-serif; }
-        
-        .navbar { background: #1e293b; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 100; }
-        .navbar h3 { color: white; font-size: 18px; margin: 0; }
-        .install-nav-btn { background: #10b981; color: white; padding: 10px 20px; border-radius: 25px; border: none; cursor: pointer; font-size: 14px; font-weight: bold; display: none; box-shadow: 0 4px 15px rgba(16,185,129,0.3); }
-        .install-nav-btn:hover { background: #059669; }
-        
-        .container { max-width: 950px; margin: 0 auto; padding: 20px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0f172a; color: white; padding: 20px; font-family: Arial, sans-serif; }
         .card { background: #1e293b; border-radius: 15px; padding: 25px; margin-bottom: 20px; border: 1px solid #334155; }
         .form-control, .form-select { background: #334155; color: white !important; border: 1px solid #475569; padding: 12px; border-radius: 8px; width: 100%; font-size: 16px; }
-        .form-control:focus, .form-select:focus { background: #334155; color: white !important; outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.3); }
+        .form-control:focus, .form-select:focus { background: #334155; color: white !important; outline: none; border-color: #3b82f6; }
         .form-control::placeholder { color: #94a3b8; }
         .form-control[readonly] { background: #1a2744 !important; font-weight: bold; font-size: 18px; cursor: default; }
         label { font-weight: 600; margin-top: 12px; margin-bottom: 4px; display: block; color: #e2e8f0; font-size: 14px; }
@@ -60,29 +53,25 @@ async def home(request: Request):
         th { background: #334155; padding: 12px; text-align: left; font-size: 13px; color: #e2e8f0; }
         td { padding: 12px; border-bottom: 1px solid #334155; font-size: 14px; }
         tr:hover { background: rgba(59,130,246,0.05); }
-        h1 { text-align: center; margin-bottom: 25px; font-size: 28px; }
-        h4 { margin-bottom: 20px; color: #e2e8f0; }
+        .install-btn { background: #10b981; color: white; padding: 12px 24px; border-radius: 25px; border: none; cursor: pointer; display: none; margin-bottom: 15px; font-size: 16px; font-weight: bold; }
+        .install-btn:hover { background: #059669; }
+        h1 { text-align: center; margin-bottom: 25px; }
         .row { display: flex; flex-wrap: wrap; gap: 15px; }
         .col-md-6 { flex: 1 1 48%; min-width: 200px; }
         .col-md-3 { flex: 1 1 23%; min-width: 150px; }
         .col-md-4 { flex: 1 1 31%; min-width: 180px; }
-        .badge-status { color: white; padding: 5px 14px; border-radius: 15px; font-size: 12px; font-weight: bold; white-space: nowrap; }
-        
         @media (max-width: 768px) {
             .col-md-6, .col-md-3, .col-md-4 { flex: 1 1 100%; }
-            h1 { font-size: 22px; }
-            .navbar h3 { font-size: 16px; }
         }
     </style>
 </head>
 <body>
-    <div class="navbar">
-        <h3>📊 PEGY Calculator</h3>
-        <button id="installNavBtn" class="install-nav-btn" onclick="installApp()">📲 Install App</button>
-    </div>
-
-    <div class="container">
+    <div class="container" style="max-width: 950px; margin: 0 auto;">
         <h1>📊 PEGY Ratio Calculator</h1>
+        
+        <div style="text-align: center;">
+            <button id="installBtn" class="install-btn" onclick="installApp()">📲 Install App</button>
+        </div>
 
         <div class="card">
             <h4>📝 Input Stock Data</h4>
@@ -111,7 +100,7 @@ async def home(request: Request):
                         <input type="number" step="0.01" class="form-control" id="epsCurrent" placeholder="e.g., 4.88" required oninput="autoCalcGrowth()">
                     </div>
                     <div class="col-md-4">
-                        <label>📊 Old EPS (3 Years Ago) *</label>
+                        <label>📊 Old EPS (3 Yrs Ago) *</label>
                         <input type="number" step="0.01" class="form-control" id="epsOld" placeholder="e.g., 3.50" required oninput="autoCalcGrowth()">
                     </div>
                     <div class="col-md-4">
@@ -180,11 +169,11 @@ async def home(request: Request):
         window.addEventListener('beforeinstallprompt', function(e) {
             e.preventDefault();
             deferredPrompt = e;
-            document.getElementById('installNavBtn').style.display = 'inline-block';
+            document.getElementById('installBtn').style.display = 'inline-block';
         });
 
         window.addEventListener('appinstalled', function() {
-            document.getElementById('installNavBtn').style.display = 'none';
+            document.getElementById('installBtn').style.display = 'none';
             deferredPrompt = null;
         });
 
@@ -193,28 +182,22 @@ async def home(request: Request):
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then(function(result) {
                     if (result.outcome === 'accepted') {
-                        document.getElementById('installNavBtn').style.display = 'none';
+                        document.getElementById('installBtn').style.display = 'none';
                     }
                     deferredPrompt = null;
                 });
             } else {
-                alert('Open in Chrome/Edge and try again.');
+                alert('📲 Open in Chrome/Edge browser and try again.');
             }
         }
 
         if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
-            document.getElementById('installNavBtn').style.display = 'none';
+            document.getElementById('installBtn').style.display = 'none';
         }
 
         // ===== Service Worker =====
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/static/sw.js').then(function(reg) {
-                    console.log('SW registered:', reg.scope);
-                }).catch(function(err) {
-                    console.log('SW failed:', err);
-                });
-            });
+            navigator.serviceWorker.register('/static/sw.js');
         }
 
         // ===== Load Records =====
@@ -229,10 +212,9 @@ async def home(request: Request):
                         return;
                     }
                     
-                    var html = '';
-                    records.forEach(function(r) {
+                    tbody.innerHTML = records.map(function(r) {
                         var growthColor = (r.eps_growth != null && r.eps_growth >= 0) ? '#27ae60' : '#e74c3c';
-                        html += '<tr>' +
+                        return '<tr>' +
                             '<td><strong style="color:#60a5fa;">' + (r.symbol || '-') + '</strong></td>' +
                             '<td>' + (r.eps != null ? parseFloat(r.eps).toFixed(2) : '-') + '</td>' +
                             '<td>' + (r.eps_old != null ? parseFloat(r.eps_old).toFixed(2) : '-') + '</td>' +
@@ -241,11 +223,10 @@ async def home(request: Request):
                             '<td>' + (r.pe_ratio != null ? parseFloat(r.pe_ratio).toFixed(2) : '-') + '</td>' +
                             '<td>' + (r.peg_ratio != null ? parseFloat(r.peg_ratio).toFixed(2) : 'N/A') + '</td>' +
                             '<td><strong style="color: ' + (r.color || '#fff') + '; font-size: 16px;">' + (r.pegy_ratio != null ? parseFloat(r.pegy_ratio).toFixed(2) : 'N/A') + '</strong></td>' +
-                            '<td><span class="badge-status" style="background: ' + (r.color || '#95a5a6') + ';">' + (r.status ? r.status.split(' - ')[0] : '-') + '</span></td>' +
+                            '<td><span style="background: ' + (r.color || '#95a5a6') + '; color: white; padding: 5px 14px; border-radius: 15px; font-size: 12px; font-weight: bold;">' + (r.status ? r.status.split(' - ')[0] : '-') + '</span></td>' +
                             '<td><button onclick="deleteRecord(\'' + r._id + '\')" class="btn-danger">🗑</button></td>' +
                         '</tr>';
-                    });
-                    tbody.innerHTML = html;
+                    }).join('');
                 })
                 .catch(function(error) {
                     console.error('Load error:', error);
@@ -305,9 +286,10 @@ async def home(request: Request):
             fetch('/api/records/' + id, { method: 'DELETE' })
                 .then(function(res) {
                     if (res.ok) loadRecords();
+                    else alert('Delete failed');
                 })
                 .catch(function(error) {
-                    alert('Error deleting record');
+                    alert('Error: ' + error.message);
                 });
         }
 
@@ -428,7 +410,7 @@ async def manifest():
 @app.get("/static/sw.js")
 async def service_worker():
     sw_js = """
-const CACHE_NAME = 'pegy-calc-v5';
+const CACHE_NAME = 'pegy-calc-v6';
 const ASSETS = ['/', '/static/manifest.json', '/static/icon-192.png', '/static/icon-512.png'];
 
 self.addEventListener('install', (event) => {
