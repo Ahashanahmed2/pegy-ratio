@@ -34,7 +34,7 @@ async def home(request: Request):
             table_rows += f"""<tr>
                 <td><b style="color:#60a5fa;">{r.get('symbol','-')}</b></td>
                 <td>{float(r.get('eps',0)):.2f}</td>
-                <td>{float(r.get('eps_old',0)):.2f if r.get('eps_old') else '-'}</td>
+                <td>{float(r['eps_old']):.2f}</td>
                 <td style="color:{gc};font-weight:bold;">{float(r['eps_growth']):.2f}%</td>
                 <td>{float(r.get('dividend_yield',0)):.2f}%</td>
                 <td>{float(r.get('pe_ratio',0)):.2f}</td>
