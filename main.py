@@ -27,38 +27,37 @@ async def home(request: Request):
         r["_id"] = str(r["_id"])
     
     # Build table rows
-table_rows = ""
-if records:
-    for r in records:
-        # Safe get values
-        symbol = r.get('symbol', '-')
-        eps_val = f"{r['eps']:.2f}" if r.get('eps') is not None else '-'
-        eps_old_val = f"{r['eps_old']:.2f}" if r.get('eps_old') is not None else '-'
-        growth_val = f"{r['eps_growth']:.2f}%" if r.get('eps_growth') is not None else '-'
-        div_val = f"{r['dividend_yield']:.2f}%" if r.get('dividend_yield') is not None else '-'
-        pe_val = f"{r['pe_ratio']:.2f}" if r.get('pe_ratio') is not None else '-'
-        peg_val = f"{r['peg_ratio']:.2f}" if r.get('peg_ratio') is not None else '-'
-        pegy_val = f"{r['pegy_ratio']:.2f}" if r.get('pegy_ratio') is not None else '-'
-        color = r.get('color', '#fff')
-        status = r.get('status', '-')
-        if ' - ' in status:
-            status = status.split(' - ')[0]
-        gc = "#27ae60" if (r.get('eps_growth') is not None and r['eps_growth'] >= 0) else "#e74c3c"
-        
-        table_rows += f"""<tr>
-            <td><b style="color:#60a5fa;">{symbol}</b></td>
-            <td>{eps_val}</td>
-            <td>{eps_old_val}</td>
-            <td style="color:{gc};font-weight:bold;">{growth_val}</td>
-            <td>{div_val}</td>
-            <td>{pe_val}</td>
-            <td>{peg_val}</td>
-            <td><b style="color:{color};">{pegy_val}</b></td>
-            <td><span style="background:{color};color:white;padding:3px 10px;border-radius:10px;font-size:12px;">{status}</span></td>
-            <td><a href="/delete/{r['_id']}" style="color:#e74c3c;text-decoration:none;font-size:18px;" onclick="return confirm('Delete?')">🗑</a></td>
-        </tr>"""
-else:
-    table_rows = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:30px;">No records yet</td></tr>'
+    table_rows = ""
+    if records:
+        for r in records:
+            symbol = r.get('symbol', '-')
+            eps_val = f"{r['eps']:.2f}" if r.get('eps') is not None else '-'
+            eps_old_val = f"{r['eps_old']:.2f}" if r.get('eps_old') is not None else '-'
+            growth_val = f"{r['eps_growth']:.2f}%" if r.get('eps_growth') is not None else '-'
+            div_val = f"{r['dividend_yield']:.2f}%" if r.get('dividend_yield') is not None else '-'
+            pe_val = f"{r['pe_ratio']:.2f}" if r.get('pe_ratio') is not None else '-'
+            peg_val = f"{r['peg_ratio']:.2f}" if r.get('peg_ratio') is not None else '-'
+            pegy_val = f"{r['pegy_ratio']:.2f}" if r.get('pegy_ratio') is not None else '-'
+            color = r.get('color', '#fff')
+            status = r.get('status', '-')
+            if ' - ' in status:
+                status = status.split(' - ')[0]
+            gc = "#27ae60" if (r.get('eps_growth') is not None and r['eps_growth'] >= 0) else "#e74c3c"
+            
+            table_rows += f"""<tr>
+                <td><b style="color:#60a5fa;">{symbol}</b></td>
+                <td>{eps_val}</td>
+                <td>{eps_old_val}</td>
+                <td style="color:{gc};font-weight:bold;">{growth_val}</td>
+                <td>{div_val}</td>
+                <td>{pe_val}</td>
+                <td>{peg_val}</td>
+                <td><b style="color:{color};">{pegy_val}</b></td>
+                <td><span style="background:{color};color:white;padding:3px 10px;border-radius:10px;font-size:12px;">{status}</span></td>
+                <td><a href="/delete/{r['_id']}" style="color:#e74c3c;text-decoration:none;font-size:18px;" onclick="return confirm('Delete?')">🗑</a></td>
+            </tr>"""
+    else:
+        table_rows = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:30px;">No records yet</td></tr>'
     
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -100,29 +99,22 @@ else:
             <form method="POST" action="/submit">
                 <label>🏷️ Symbol *</label>
                 <input type="text" name="symbol" placeholder="CITYBANK" required>
-                
                 <label>📅 Period *</label>
                 <select name="eps_period" required>
                     <option value="annual">📆 Annual</option>
                     <option value="quarterly">📋 Quarterly</option>
                 </select>
-                
                 <label>💹 Current Price *</label>
                 <input type="number" step="0.01" name="current_price" placeholder="25.00" required>
-                
                 <label>📊 Current EPS *</label>
                 <input type="number" step="0.01" name="eps" placeholder="4.88" required oninput="calcGrowth()">
-                
                 <label>📊 Old EPS (3Yr Ago) *</label>
                 <input type="number" step="0.01" name="eps_old" placeholder="3.50" required oninput="calcGrowth()">
-                
                 <label>📈 EPS Growth 3Yr (%)</label>
                 <input type="text" id="epsGrowthDisplay" placeholder="Auto" readonly>
                 <input type="hidden" name="eps_growth" id="epsGrowthHidden">
-                
                 <label>💵 Dividend Yield (%) *</label>
                 <input type="number" step="0.01" name="dividend_yield" placeholder="5.60" required>
-                
                 <button type="submit" class="btn">📊 Calculate PEGY</button>
             </form>
         </div>
@@ -168,7 +160,7 @@ else:
 </html>"""
     return HTMLResponse(content=html)
 
-# ---------------------- Form Submit (No JS) ----------------------
+# ---------------------- Form Submit ----------------------
 @app.post("/submit")
 async def submit_form(
     symbol: str = Form(...),
@@ -179,10 +171,8 @@ async def submit_form(
     dividend_yield: float = Form(...),
     current_price: float = Form(...),
 ):
-    """Handle form submit and redirect to home"""
     try:
         pe_ratio = round(current_price / eps, 2)
-        
         if eps_period == "quarterly":
             annual_eps = eps * 4
             pe_ratio = round(current_price / annual_eps, 2)
@@ -200,39 +190,19 @@ async def submit_form(
                 pegy_ratio = round(pe_ratio / total_return, 2)
         
         if pegy_ratio is not None:
-            if pegy_ratio < 1:
-                status = "Excellent"
-                color = "#27ae60"
-            elif pegy_ratio < 2:
-                status = "Good"
-                color = "#2ecc71"
-            elif pegy_ratio < 3:
-                status = "Average"
-                color = "#f39c12"
-            else:
-                status = "Poor"
-                color = "#e74c3c"
-        else:
-            status = "N/A"
-            color = "#95a5a6"
+            if pegy_ratio < 1: status, color = "Excellent", "#27ae60"
+            elif pegy_ratio < 2: status, color = "Good", "#2ecc71"
+            elif pegy_ratio < 3: status, color = "Average", "#f39c12"
+            else: status, color = "Poor", "#e74c3c"
+        else: status, color = "N/A", "#95a5a6"
         
-        doc = {
-            "symbol": symbol.upper(),
-            "eps": annual_eps if eps_period == "quarterly" else eps,
-            "eps_old": eps_old,
-            "eps_period": eps_period,
-            "dividend_yield": dividend_yield,
-            "eps_growth": eps_growth,
-            "current_price": current_price,
-            "pe_ratio": pe_ratio,
-            "peg_ratio": peg_ratio,
-            "pegy_ratio": pegy_ratio,
-            "status": status,
-            "color": color,
-            "created_at": datetime.utcnow(),
-        }
-        
-        await pegy_collection.insert_one(doc)
+        await pegy_collection.insert_one({
+            "symbol": symbol.upper(), "eps": annual_eps if eps_period == "quarterly" else eps,
+            "eps_old": eps_old, "eps_period": eps_period, "dividend_yield": dividend_yield,
+            "eps_growth": eps_growth, "current_price": current_price,
+            "pe_ratio": pe_ratio, "peg_ratio": peg_ratio, "pegy_ratio": pegy_ratio,
+            "status": status, "color": color, "created_at": datetime.utcnow(),
+        })
     except Exception as e:
         print(f"Error: {e}")
     
@@ -241,48 +211,39 @@ async def submit_form(
 # ---------------------- Delete ----------------------
 @app.get("/delete/{record_id}")
 async def delete_record(record_id: str):
-    """Delete a record"""
     try:
-        obj_id = ObjectId(record_id)
-        await pegy_collection.delete_one({"_id": obj_id})
+        await pegy_collection.delete_one({"_id": ObjectId(record_id)})
     except:
         pass
     return RedirectResponse(url="/", status_code=303)
 
-# ---------------------- Health Check ----------------------
+# ---------------------- Health ----------------------
 @app.get("/health")
-async def health_check():
+async def health():
     return {"status": "ok"}
 
 @app.head("/health")
-async def health_check_head():
+async def health_head():
     return HTMLResponse(content="", status_code=200)
 
 # ---------------------- API ----------------------
 @app.post("/api/calculate")
 async def calculate_pegy(data: PEGYInput):
-    """Calculate PEGY Ratio and save to database"""
     try:
         pe_ratio = round(data.current_price / data.eps, 2)
         if data.eps_period == "quarterly":
             pe_ratio = round(data.current_price / (data.eps * 4), 2)
-        
-        peg_ratio = None
-        if data.eps_growth and data.eps_growth > 0:
-            peg_ratio = round(pe_ratio / data.eps_growth, 2)
-        
+        peg_ratio = round(pe_ratio / data.eps_growth, 2) if (data.eps_growth and data.eps_growth > 0) else None
         pegy_ratio = None
         if data.eps_growth and data.eps_growth > 0:
             t = data.eps_growth + data.dividend_yield
             if t > 0: pegy_ratio = round(pe_ratio / t, 2)
-        
         if pegy_ratio is not None:
             if pegy_ratio < 1: status, color = "Excellent", "#27ae60"
             elif pegy_ratio < 2: status, color = "Good", "#2ecc71"
             elif pegy_ratio < 3: status, color = "Average", "#f39c12"
             else: status, color = "Poor", "#e74c3c"
         else: status, color = "N/A", "#95a5a6"
-        
         result = await pegy_collection.insert_one({
             "symbol": data.symbol.upper(), "eps": data.eps, "eps_old": data.eps_old,
             "eps_period": data.eps_period, "dividend_yield": data.dividend_yield,
@@ -300,7 +261,7 @@ async def get_records():
     for r in records: r["_id"] = str(r["_id"])
     return records
 
-# ---------------------- Manifest ----------------------
+# ---------------------- Manifest & SW ----------------------
 @app.get("/manifest.json")
 async def manifest():
     return FileResponse("static/manifest.json")
