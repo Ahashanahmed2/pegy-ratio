@@ -1,5 +1,5 @@
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi import FastAPI, HTTPException, Request, Form
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from bson import ObjectId
 from datetime import datetime
@@ -21,8 +21,32 @@ async def startup():
 # ---------------------- Pages ----------------------
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    """Home page with inline HTML"""
-    html = """<!DOCTYPE html>
+    """Home page"""
+    records = await pegy_collection.find().sort("pegy_ratio", 1).to_list(100)
+    for r in records:
+        r["_id"] = str(r["_id"])
+    
+    # Build table rows
+    table_rows = ""
+    if records:
+        for r in records:
+            gc = "#27ae60" if (r.get("eps_growth") and r["eps_growth"] >= 0) else "#e74c3c"
+            table_rows += f"""<tr>
+                <td><b style="color:#60a5fa;">{r.get('symbol','-')}</b></td>
+                <td>{float(r.get('eps',0)):.2f}</td>
+                <td>{float(r.get('eps_old',0)):.2f if r.get('eps_old') else '-'}</td>
+                <td style="color:{gc};font-weight:bold;">{float(r['eps_growth']):.2f}%</td>
+                <td>{float(r.get('dividend_yield',0)):.2f}%</td>
+                <td>{float(r.get('pe_ratio',0)):.2f}</td>
+                <td>{float(r['peg_ratio']):.2f if r.get('peg_ratio') else '-'}</td>
+                <td><b style="color:{r.get('color','#fff')};">{float(r['pegy_ratio']):.2f if r.get('pegy_ratio') else '-'}</b></td>
+                <td><span style="background:{r.get('color','#95a5a6')};color:white;padding:3px 10px;border-radius:10px;font-size:12px;">{r.get('status','-').split(' - ')[0]}</span></td>
+                <td><a href="/delete/{r['_id']}" style="color:#e74c3c;text-decoration:none;font-size:18px;" onclick="return confirm('Delete?')">🗑</a></td>
+            </tr>"""
+    else:
+        table_rows = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:30px;">No records yet</td></tr>'
+    
+    html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -33,61 +57,60 @@ async def home(request: Request):
     <link rel="apple-touch-icon" href="/static/icon-192.png">
     <meta name="theme-color" content="#3b82f6">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { background:#0f172a; color:white; padding:10px; font-family:Arial,sans-serif; }
-        .card { background:#1e293b; border-radius:15px; padding:15px; margin-bottom:15px; border:1px solid #334155; }
-        input, select { background:#334155; color:white !important; border:1px solid #475569; padding:14px; border-radius:10px; width:100%; font-size:16px; margin-top:8px; }
-        input:focus, select:focus { outline:none; border-color:#3b82f6; }
-        input::placeholder { color:#94a3b8; }
-        input[readonly] { background:#1a2744; font-weight:bold; font-size:18px; }
-        label { font-weight:600; margin-top:12px; display:block; color:#e2e8f0; font-size:14px; }
-        .btn-submit { background:#3b82f6; border:none; padding:16px; font-weight:bold; border-radius:10px; width:100%; color:white; font-size:18px; margin-top:20px; cursor:pointer; }
-        .btn-submit:active { background:#2563eb; }
-        .btn-delete { background:#e74c3c; border:none; color:white; padding:8px 12px; border-radius:6px; cursor:pointer; font-size:14px; }
-        table { width:100%; border-collapse:collapse; margin-top:10px; font-size:12px; }
-        th { background:#334155; padding:8px 6px; text-align:left; font-size:11px; color:#e2e8f0; }
-        td { padding:8px 6px; border-bottom:1px solid #334155; font-size:12px; }
-        .install-btn { background:#10b981; color:white; padding:14px; border-radius:30px; border:none; cursor:pointer; display:none; margin-bottom:10px; font-size:16px; font-weight:bold; width:100%; }
-        h1 { text-align:center; margin-bottom:15px; font-size:22px; }
-        h4 { margin-bottom:10px; font-size:16px; }
+        * {{ margin:0; padding:0; box-sizing:border-box; }}
+        body {{ background:#0f172a; color:white; padding:10px; font-family:Arial,sans-serif; }}
+        .card {{ background:#1e293b; border-radius:15px; padding:15px; margin-bottom:15px; }}
+        input, select {{ background:#334155; color:white; border:1px solid #475569; padding:14px; border-radius:10px; width:100%; font-size:16px; margin-top:8px; }}
+        input:focus, select:focus {{ outline:none; border-color:#3b82f6; }}
+        input::placeholder {{ color:#94a3b8; }}
+        input[readonly] {{ background:#1a2744; font-weight:bold; font-size:18px; }}
+        label {{ font-weight:600; margin-top:12px; display:block; color:#e2e8f0; font-size:14px; }}
+        .btn {{ background:#3b82f6; border:none; padding:16px; font-weight:bold; border-radius:10px; width:100%; color:white; font-size:18px; margin-top:20px; cursor:pointer; }}
+        .btn:active {{ background:#2563eb; }}
+        table {{ width:100%; border-collapse:collapse; margin-top:10px; font-size:11px; }}
+        th {{ background:#334155; padding:8px 4px; text-align:left; font-size:10px; color:#e2e8f0; }}
+        td {{ padding:8px 4px; border-bottom:1px solid #334155; font-size:11px; }}
+        h1 {{ text-align:center; margin-bottom:15px; font-size:22px; }}
+        h4 {{ margin-bottom:10px; }}
+        .install-btn {{ background:#10b981; color:white; padding:14px; border-radius:30px; border:none; cursor:pointer; display:none; margin-bottom:10px; font-size:16px; font-weight:bold; width:100%; }}
     </style>
 </head>
 <body>
     <div style="max-width:600px;margin:0 auto;">
         <h1>📊 PEGY Calculator</h1>
-        
         <button id="installBtn" class="install-btn" onclick="installApp()">📲 Install App</button>
 
         <div class="card">
             <h4>📝 Input Data</h4>
-            <form id="pegyForm" autocomplete="off" onsubmit="return false;">
+            <form method="POST" action="/submit">
                 <label>🏷️ Symbol *</label>
-                <input type="text" id="symbol" placeholder="CITYBANK" required>
+                <input type="text" name="symbol" placeholder="CITYBANK" required>
                 
                 <label>📅 Period *</label>
-                <select id="epsPeriod" required>
+                <select name="eps_period" required>
                     <option value="annual">📆 Annual</option>
                     <option value="quarterly">📋 Quarterly</option>
                 </select>
                 
                 <label>💹 Current Price *</label>
-                <input type="number" step="0.01" id="currentPrice" placeholder="25.00" required>
+                <input type="number" step="0.01" name="current_price" placeholder="25.00" required>
                 
                 <label>📊 Current EPS *</label>
-                <input type="number" step="0.01" id="epsCurrent" placeholder="4.88" required oninput="calcGrowth()">
+                <input type="number" step="0.01" name="eps" placeholder="4.88" required oninput="calcGrowth()">
                 
                 <label>📊 Old EPS (3Yr Ago) *</label>
-                <input type="number" step="0.01" id="epsOld" placeholder="3.50" required oninput="calcGrowth()">
+                <input type="number" step="0.01" name="eps_old" placeholder="3.50" required oninput="calcGrowth()">
                 
                 <label>📈 EPS Growth 3Yr (%)</label>
-                <input type="text" id="epsGrowth" placeholder="Auto" readonly>
+                <input type="text" id="epsGrowthDisplay" placeholder="Auto" readonly>
+                <input type="hidden" name="eps_growth" id="epsGrowthHidden">
                 
                 <label>💵 Dividend Yield (%) *</label>
-                <input type="number" step="0.01" id="dividendYield" placeholder="5.60" required>
+                <input type="number" step="0.01" name="dividend_yield" placeholder="5.60" required>
+                
+                <button type="submit" class="btn">📊 Calculate PEGY</button>
             </form>
-            <button class="btn-submit" id="submitBtn" onclick="submitData()">📊 Calculate PEGY</button>
         </div>
 
         <div class="card">
@@ -95,141 +118,127 @@ async def home(request: Request):
             <div style="overflow-x:auto;">
                 <table>
                     <thead>
-                        <tr><th>Symbol</th><th>EPS</th><th>Old</th><th>Grw</th><th>Div</th><th>P/E</th><th>PEG</th><th>PEGY</th><th>Status</th><th></th></tr>
+                        <tr><th>Sym</th><th>EPS</th><th>Old</th><th>Grw</th><th>Div</th><th>P/E</th><th>PEG</th><th>PEGY</th><th>Stat</th><th>Del</th></tr>
                     </thead>
-                    <tbody id="tableBody">
-                        <tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:20px;">Loading...</td></tr>
-                    </tbody>
+                    <tbody>{table_rows}</tbody>
                 </table>
             </div>
         </div>
     </div>
 
     <script>
-        function calcGrowth() {
-            var c = parseFloat(document.getElementById('epsCurrent').value);
-            var o = parseFloat(document.getElementById('epsOld').value);
-            var f = document.getElementById('epsGrowth');
-            if (c > 0 && o > 0) {
+        function calcGrowth() {{
+            var c = parseFloat(document.querySelector('input[name="eps"]').value);
+            var o = parseFloat(document.querySelector('input[name="eps_old"]').value);
+            var d = document.getElementById('epsGrowthDisplay');
+            var h = document.getElementById('epsGrowthHidden');
+            if (c > 0 && o > 0) {{
                 var g = (Math.pow((c/o), (1/3)) - 1) * 100;
-                f.value = g.toFixed(2) + '%';
-                f.style.color = g >= 0 ? '#27ae60' : '#e74c3c';
-            } else {
-                f.value = '';
-                f.style.color = '#e2e8f0';
-            }
-        }
+                d.value = g.toFixed(2) + '%';
+                d.style.color = g >= 0 ? '#27ae60' : '#e74c3c';
+                h.value = g.toFixed(2);
+            }} else {{
+                d.value = '';
+                h.value = '';
+                d.style.color = '#e2e8f0';
+            }}
+        }}
 
-        var deferredPrompt;
-        window.addEventListener('beforeinstallprompt', function(e) {
-            e.preventDefault();
-            deferredPrompt = e;
-            document.getElementById('installBtn').style.display = 'block';
-        });
-        function installApp() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then(function(r) {
-                    if (r.outcome === 'accepted') document.getElementById('installBtn').style.display = 'none';
-                    deferredPrompt = null;
-                });
-            }
-        }
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            document.getElementById('installBtn').style.display = 'none';
-        }
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/sw.js');
-        }
-
-        function loadRecords() {
-            fetch('/api/records')
-            .then(function(r) { return r.json(); })
-            .then(function(records) {
-                var t = document.getElementById('tableBody');
-                if (!records || records.length === 0) {
-                    t.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:20px;">No records</td></tr>';
-                    return;
-                }
-                var h = '';
-                for (var i=0; i<records.length; i++) {
-                    var r = records[i];
-                    var gc = (r.eps_growth != null && r.eps_growth >= 0) ? '#27ae60' : '#e74c3c';
-                    h += '<tr>' +
-                        '<td><b style="color:#60a5fa;">' + (r.symbol||'-') + '</b></td>' +
-                        '<td>' + (r.eps!=null ? Number(r.eps).toFixed(2) : '-') + '</td>' +
-                        '<td>' + (r.eps_old!=null ? Number(r.eps_old).toFixed(2) : '-') + '</td>' +
-                        '<td style="color:'+gc+';">' + (r.eps_growth!=null ? Number(r.eps_growth).toFixed(2)+'%' : '-') + '</td>' +
-                        '<td>' + (r.dividend_yield!=null ? Number(r.dividend_yield).toFixed(2)+'%' : '-') + '</td>' +
-                        '<td>' + (r.pe_ratio!=null ? Number(r.pe_ratio).toFixed(2) : '-') + '</td>' +
-                        '<td>' + (r.peg_ratio!=null ? Number(r.peg_ratio).toFixed(2) : '-') + '</td>' +
-                        '<td><b style="color:'+(r.color||'#fff')+';">' + (r.pegy_ratio!=null ? Number(r.pegy_ratio).toFixed(2) : '-') + '</b></td>' +
-                        '<td><span style="background:'+(r.color||'#95a5a6')+';color:white;padding:2px 8px;border-radius:8px;font-size:11px;">' + (r.status ? r.status.split(' - ')[0] : '-') + '</span></td>' +
-                        '<td><button class="btn-delete" onclick="delRecord(\'' + r._id + '\')">🗑</button></td>' +
-                    '</tr>';
-                }
-                t.innerHTML = h;
-            });
-        }
-
-        function submitData() {
-            var btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.innerHTML = '⏳ Wait...';
-            
-            var gr = document.getElementById('epsGrowth').value.replace('%', '');
-            
-            var data = {
-                symbol: document.getElementById('symbol').value.toUpperCase().trim(),
-                eps: parseFloat(document.getElementById('epsCurrent').value),
-                eps_old: parseFloat(document.getElementById('epsOld').value) || null,
-                eps_period: document.getElementById('epsPeriod').value,
-                eps_growth: parseFloat(gr) || null,
-                dividend_yield: parseFloat(document.getElementById('dividendYield').value),
-                current_price: parseFloat(document.getElementById('currentPrice').value)
-            };
-            
-            fetch('/api/calculate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            .then(function(r) {
-                if (r.ok) return r.json();
-                return r.json().then(function(e) { throw new Error(e.detail || 'Failed'); });
-            })
-            .then(function() {
-                document.getElementById('pegyForm').reset();
-                document.getElementById('epsPeriod').value = 'annual';
-                document.getElementById('epsGrowth').value = '';
-                loadRecords();
-            })
-            .catch(function(e) {
-                alert('Error: ' + e.message);
-            })
-            .finally(function() {
-                btn.disabled = false;
-                btn.innerHTML = '📊 Calculate PEGY';
-            });
-        }
-
-        function delRecord(id) {
-            if (!confirm('Delete?')) return;
-            fetch('/api/records/' + id, { method: 'DELETE' })
-            .then(function(r) { if (r.ok) loadRecords(); });
-        }
-
-        loadRecords();
+        var dp;
+        window.addEventListener('beforeinstallprompt', function(e) {{ e.preventDefault(); dp = e; document.getElementById('installBtn').style.display = 'block'; }});
+        function installApp() {{ if (dp) {{ dp.prompt(); dp.userChoice.then(function(r) {{ if (r.outcome === 'accepted') document.getElementById('installBtn').style.display = 'none'; dp = null; }}); }} }}
+        if (window.matchMedia('(display-mode: standalone)').matches) {{ document.getElementById('installBtn').style.display = 'none'; }}
+        if ('serviceWorker' in navigator) {{ navigator.serviceWorker.register('/static/sw.js'); }}
     </script>
 </body>
 </html>"""
     return HTMLResponse(content=html)
 
+# ---------------------- Form Submit (No JS) ----------------------
+@app.post("/submit")
+async def submit_form(
+    symbol: str = Form(...),
+    eps: float = Form(...),
+    eps_old: float = Form(None),
+    eps_period: str = Form(...),
+    eps_growth: float = Form(None),
+    dividend_yield: float = Form(...),
+    current_price: float = Form(...),
+):
+    """Handle form submit and redirect to home"""
+    try:
+        pe_ratio = round(current_price / eps, 2)
+        
+        if eps_period == "quarterly":
+            annual_eps = eps * 4
+            pe_ratio = round(current_price / annual_eps, 2)
+        else:
+            annual_eps = eps
+        
+        peg_ratio = None
+        if eps_growth and eps_growth > 0:
+            peg_ratio = round(pe_ratio / eps_growth, 2)
+        
+        pegy_ratio = None
+        if eps_growth and eps_growth > 0:
+            total_return = eps_growth + dividend_yield
+            if total_return > 0:
+                pegy_ratio = round(pe_ratio / total_return, 2)
+        
+        if pegy_ratio is not None:
+            if pegy_ratio < 1:
+                status = "Excellent"
+                color = "#27ae60"
+            elif pegy_ratio < 2:
+                status = "Good"
+                color = "#2ecc71"
+            elif pegy_ratio < 3:
+                status = "Average"
+                color = "#f39c12"
+            else:
+                status = "Poor"
+                color = "#e74c3c"
+        else:
+            status = "N/A"
+            color = "#95a5a6"
+        
+        doc = {
+            "symbol": symbol.upper(),
+            "eps": annual_eps if eps_period == "quarterly" else eps,
+            "eps_old": eps_old,
+            "eps_period": eps_period,
+            "dividend_yield": dividend_yield,
+            "eps_growth": eps_growth,
+            "current_price": current_price,
+            "pe_ratio": pe_ratio,
+            "peg_ratio": peg_ratio,
+            "pegy_ratio": pegy_ratio,
+            "status": status,
+            "color": color,
+            "created_at": datetime.utcnow(),
+        }
+        
+        await pegy_collection.insert_one(doc)
+    except Exception as e:
+        print(f"Error: {e}")
+    
+    return RedirectResponse(url="/", status_code=303)
+
+# ---------------------- Delete ----------------------
+@app.get("/delete/{record_id}")
+async def delete_record(record_id: str):
+    """Delete a record"""
+    try:
+        obj_id = ObjectId(record_id)
+        await pegy_collection.delete_one({"_id": obj_id})
+    except:
+        pass
+    return RedirectResponse(url="/", status_code=303)
+
 # ---------------------- Health Check ----------------------
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "message": "PEGY Calculator is running"}
+    return {"status": "ok"}
 
 @app.head("/health")
 async def health_check_head():
@@ -241,12 +250,8 @@ async def calculate_pegy(data: PEGYInput):
     """Calculate PEGY Ratio and save to database"""
     try:
         pe_ratio = round(data.current_price / data.eps, 2)
-        
         if data.eps_period == "quarterly":
-            annual_eps = data.eps * 4
-            pe_ratio = round(data.current_price / annual_eps, 2)
-        else:
-            annual_eps = data.eps
+            pe_ratio = round(data.current_price / (data.eps * 4), 2)
         
         peg_ratio = None
         if data.eps_growth and data.eps_growth > 0:
@@ -254,95 +259,41 @@ async def calculate_pegy(data: PEGYInput):
         
         pegy_ratio = None
         if data.eps_growth and data.eps_growth > 0:
-            total_return = data.eps_growth + data.dividend_yield
-            if total_return > 0:
-                pegy_ratio = round(pe_ratio / total_return, 2)
+            t = data.eps_growth + data.dividend_yield
+            if t > 0: pegy_ratio = round(pe_ratio / t, 2)
         
         if pegy_ratio is not None:
-            if pegy_ratio < 1:
-                status = "Excellent - Undervalued"
-                color = "#27ae60"
-            elif pegy_ratio < 2:
-                status = "Good - Fairly Valued"
-                color = "#2ecc71"
-            elif pegy_ratio < 3:
-                status = "Average - Slightly Overvalued"
-                color = "#f39c12"
-            else:
-                status = "Poor - Highly Overvalued"
-                color = "#e74c3c"
-        else:
-            status = "N/A - Need EPS Growth Rate"
-            color = "#95a5a6"
+            if pegy_ratio < 1: status, color = "Excellent", "#27ae60"
+            elif pegy_ratio < 2: status, color = "Good", "#2ecc71"
+            elif pegy_ratio < 3: status, color = "Average", "#f39c12"
+            else: status, color = "Poor", "#e74c3c"
+        else: status, color = "N/A", "#95a5a6"
         
-        doc = {
-            "symbol": data.symbol.upper(),
-            "eps": annual_eps if data.eps_period == "quarterly" else data.eps,
-            "eps_old": data.eps_old,
-            "eps_period": data.eps_period,
-            "dividend_yield": data.dividend_yield,
-            "eps_growth": data.eps_growth,
-            "current_price": data.current_price,
-            "pe_ratio": pe_ratio,
-            "peg_ratio": peg_ratio,
-            "pegy_ratio": pegy_ratio,
-            "status": status,
-            "color": color,
-            "created_at": datetime.utcnow(),
-        }
-        
-        result = await pegy_collection.insert_one(doc)
-        
-        return {
-            "id": str(result.inserted_id),
-            "symbol": doc["symbol"],
-            "pe_ratio": doc["pe_ratio"],
-            "peg_ratio": doc["peg_ratio"],
-            "pegy_ratio": doc["pegy_ratio"],
-            "status": doc["status"],
-            "color": doc["color"],
-        }
+        result = await pegy_collection.insert_one({
+            "symbol": data.symbol.upper(), "eps": data.eps, "eps_old": data.eps_old,
+            "eps_period": data.eps_period, "dividend_yield": data.dividend_yield,
+            "eps_growth": data.eps_growth, "current_price": data.current_price,
+            "pe_ratio": pe_ratio, "peg_ratio": peg_ratio, "pegy_ratio": pegy_ratio,
+            "status": status, "color": color, "created_at": datetime.utcnow(),
+        })
+        return {"id": str(result.inserted_id), "pegy_ratio": pegy_ratio, "status": status, "color": color}
     except Exception as e:
         raise HTTPException(500, f"Error: {str(e)}")
 
 @app.get("/api/records")
 async def get_records():
-    """Get all records sorted by PEGY ratio (ascending)"""
     records = await pegy_collection.find().sort("pegy_ratio", 1).to_list(100)
-    result = []
-    for r in records:
-        r["_id"] = str(r["_id"])
-        result.append(r)
-    return result
-
-@app.delete("/api/records/{record_id}")
-async def delete_record(record_id: str):
-    """Delete a record"""
-    try:
-        obj_id = ObjectId(record_id)
-        result = await pegy_collection.delete_one({"_id": obj_id})
-        if result.deleted_count:
-            return {"message": "Deleted successfully"}
-        raise HTTPException(404, "Record not found")
-    except Exception as e:
-        raise HTTPException(400, f"Invalid ID: {str(e)}")
+    for r in records: r["_id"] = str(r["_id"])
+    return records
 
 # ---------------------- Manifest ----------------------
 @app.get("/manifest.json")
 async def manifest():
     return FileResponse("static/manifest.json")
 
-# ---------------------- Service Worker ----------------------
 @app.get("/static/sw.js")
 async def service_worker():
-    sw_js = """
-const CACHE_NAME = 'pegy-v8';
-const ASSETS = ['/', '/static/manifest.json', '/static/icon-192.png', '/static/icon-512.png'];
-self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(ASSETS))); self.skipWaiting(); });
-self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
-self.addEventListener('fetch', (e) => { e.respondWith(caches.match(e.request).then((r) => r || fetch(e.request))); });
-"""
-    return HTMLResponse(content=sw_js, media_type="application/javascript")
+    return HTMLResponse(content="""const CACHE_NAME='pegy-v9';self.addEventListener('install',(e)=>{e.waitUntil(caches.open(CACHE_NAME).then((c)=>c.addAll(['/','/static/manifest.json'])));self.skipWaiting();});self.addEventListener('activate',(e)=>{e.waitUntil(clients.claim());});self.addEventListener('fetch',(e)=>{e.respondWith(caches.match(e.request).then((r)=>r||fetch(e.request)));});""", media_type="application/javascript")
 
 # ---------------------- Run ----------------------
 if __name__ == "__main__":
