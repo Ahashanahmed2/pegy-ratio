@@ -39,13 +39,11 @@ async def home(request: Request):
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #0f172a; color: white; font-family: Arial, sans-serif; }
         
-        /* Navbar */
         .navbar { background: #1e293b; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 100; }
         .navbar h3 { color: white; font-size: 18px; margin: 0; }
         .install-nav-btn { background: #10b981; color: white; padding: 10px 20px; border-radius: 25px; border: none; cursor: pointer; font-size: 14px; font-weight: bold; display: none; box-shadow: 0 4px 15px rgba(16,185,129,0.3); }
         .install-nav-btn:hover { background: #059669; }
         
-        /* Main Content */
         .container { max-width: 950px; margin: 0 auto; padding: 20px; }
         .card { background: #1e293b; border-radius: 15px; padding: 25px; margin-bottom: 20px; border: 1px solid #334155; }
         .form-control, .form-select { background: #334155; color: white !important; border: 1px solid #475569; padding: 12px; border-radius: 8px; width: 100%; font-size: 16px; }
@@ -69,8 +67,6 @@ async def home(request: Request):
         .col-md-3 { flex: 1 1 23%; min-width: 150px; }
         .col-md-4 { flex: 1 1 31%; min-width: 180px; }
         .badge-status { color: white; padding: 5px 14px; border-radius: 15px; font-size: 12px; font-weight: bold; white-space: nowrap; }
-        .growth-green { color: #27ae60 !important; }
-        .growth-red { color: #e74c3c !important; }
         
         @media (max-width: 768px) {
             .col-md-6, .col-md-3, .col-md-4 { flex: 1 1 100%; }
@@ -80,13 +76,11 @@ async def home(request: Request):
     </style>
 </head>
 <body>
-    <!-- Navbar -->
     <div class="navbar">
         <h3>📊 PEGY Calculator</h3>
         <button id="installNavBtn" class="install-nav-btn" onclick="installApp()">📲 Install App</button>
     </div>
 
-    <!-- Main Content -->
     <div class="container">
         <h1>📊 PEGY Ratio Calculator</h1>
 
@@ -180,20 +174,18 @@ async def home(request: Request):
             }
         }
 
-        // ===== PWA Install (Navbar) =====
-        let deferredPrompt;
+        // ===== PWA Install =====
+        var deferredPrompt;
         
         window.addEventListener('beforeinstallprompt', function(e) {
             e.preventDefault();
             deferredPrompt = e;
             document.getElementById('installNavBtn').style.display = 'inline-block';
-            console.log('✅ Install ready');
         });
 
         window.addEventListener('appinstalled', function() {
             document.getElementById('installNavBtn').style.display = 'none';
             deferredPrompt = null;
-            console.log('✅ Installed');
         });
 
         function installApp() {
@@ -206,7 +198,7 @@ async def home(request: Request):
                     deferredPrompt = null;
                 });
             } else {
-                alert('📲 Open in Chrome/Edge browser and try again.');
+                alert('Open in Chrome/Edge and try again.');
             }
         }
 
@@ -218,47 +210,51 @@ async def home(request: Request):
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/static/sw.js').then(function(reg) {
-                    console.log('✅ SW:', reg.scope);
+                    console.log('SW registered:', reg.scope);
                 }).catch(function(err) {
-                    console.log('⚠️ SW:', err);
+                    console.log('SW failed:', err);
                 });
             });
         }
 
         // ===== Load Records =====
-        async function loadRecords() {
-            try {
-                var res = await fetch('/api/records');
-                var records = await res.json();
-                var tbody = document.getElementById('tableBody');
-                
-                if (!records || records.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: #94a3b8; padding: 30px;">No records yet. Add your first stock!</td></tr>';
-                    return;
-                }
-                
-                tbody.innerHTML = records.map(function(r) {
-                    var growthColor = (r.eps_growth != null && r.eps_growth >= 0) ? '#27ae60' : '#e74c3c';
-                    return '<tr>' +
-                        '<td><strong style="color:#60a5fa;">' + r.symbol + '</strong></td>' +
-                        '<td>' + (r.eps != null ? r.eps.toFixed(2) : '-') + '</td>' +
-                        '<td>' + (r.eps_old != null ? r.eps_old.toFixed(2) : '-') + '</td>' +
-                        '<td style="color:' + growthColor + ';font-weight:bold;">' + (r.eps_growth != null ? r.eps_growth.toFixed(2) + '%' : 'N/A') + '</td>' +
-                        '<td>' + (r.dividend_yield != null ? r.dividend_yield.toFixed(2) + '%' : '-') + '</td>' +
-                        '<td>' + (r.pe_ratio ? r.pe_ratio.toFixed(2) : '-') + '</td>' +
-                        '<td>' + (r.peg_ratio != null ? r.peg_ratio.toFixed(2) : 'N/A') + '</td>' +
-                        '<td><strong style="color: ' + r.color + '; font-size: 16px;">' + (r.pegy_ratio != null ? r.pegy_ratio.toFixed(2) : 'N/A') + '</strong></td>' +
-                        '<td><span class="badge-status" style="background: ' + r.color + ';">' + (r.status ? r.status.split(' - ')[0] : '-') + '</span></td>' +
-                        '<td><button onclick="deleteRecord(\'' + r._id + '\')" class="btn-danger">🗑</button></td>' +
-                    '</tr>';
-                }).join('');
-            } catch (error) {
-                console.error('Load error:', error);
-            }
+        function loadRecords() {
+            fetch('/api/records')
+                .then(function(res) { return res.json(); })
+                .then(function(records) {
+                    var tbody = document.getElementById('tableBody');
+                    
+                    if (!records || records.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: #94a3b8; padding: 30px;">No records yet. Add your first stock!</td></tr>';
+                        return;
+                    }
+                    
+                    var html = '';
+                    records.forEach(function(r) {
+                        var growthColor = (r.eps_growth != null && r.eps_growth >= 0) ? '#27ae60' : '#e74c3c';
+                        html += '<tr>' +
+                            '<td><strong style="color:#60a5fa;">' + (r.symbol || '-') + '</strong></td>' +
+                            '<td>' + (r.eps != null ? parseFloat(r.eps).toFixed(2) : '-') + '</td>' +
+                            '<td>' + (r.eps_old != null ? parseFloat(r.eps_old).toFixed(2) : '-') + '</td>' +
+                            '<td style="color:' + growthColor + ';font-weight:bold;">' + (r.eps_growth != null ? parseFloat(r.eps_growth).toFixed(2) + '%' : 'N/A') + '</td>' +
+                            '<td>' + (r.dividend_yield != null ? parseFloat(r.dividend_yield).toFixed(2) + '%' : '-') + '</td>' +
+                            '<td>' + (r.pe_ratio != null ? parseFloat(r.pe_ratio).toFixed(2) : '-') + '</td>' +
+                            '<td>' + (r.peg_ratio != null ? parseFloat(r.peg_ratio).toFixed(2) : 'N/A') + '</td>' +
+                            '<td><strong style="color: ' + (r.color || '#fff') + '; font-size: 16px;">' + (r.pegy_ratio != null ? parseFloat(r.pegy_ratio).toFixed(2) : 'N/A') + '</strong></td>' +
+                            '<td><span class="badge-status" style="background: ' + (r.color || '#95a5a6') + ';">' + (r.status ? r.status.split(' - ')[0] : '-') + '</span></td>' +
+                            '<td><button onclick="deleteRecord(\'' + r._id + '\')" class="btn-danger">🗑</button></td>' +
+                        '</tr>';
+                    });
+                    tbody.innerHTML = html;
+                })
+                .catch(function(error) {
+                    console.error('Load error:', error);
+                    document.getElementById('tableBody').innerHTML = '<tr><td colspan="10" style="text-align: center; color: #e74c3c; padding: 30px;">Error loading records</td></tr>';
+                });
         }
 
         // ===== Form Submit =====
-        document.getElementById('pegyForm').addEventListener('submit', async function(e) {
+        document.getElementById('pegyForm').addEventListener('submit', function(e) {
             e.preventDefault();
             var btn = this.querySelector('button[type="submit"]');
             btn.disabled = true;
@@ -277,40 +273,42 @@ async def home(request: Request):
                 current_price: parseFloat(document.getElementById('currentPrice').value),
             };
             
-            try {
-                var res = await fetch('/api/calculate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                
-                if (res.ok) {
-                    document.getElementById('pegyForm').reset();
-                    document.getElementById('epsPeriod').value = 'annual';
-                    document.getElementById('epsGrowth').value = '';
-                    document.getElementById('epsGrowth').style.color = '#e2e8f0';
-                    await loadRecords();
-                } else {
-                    var err = await res.json();
-                    alert('Error: ' + (err.detail || 'Failed'));
-                }
-            } catch (error) {
-                alert('Network Error: ' + error.message);
-            }
-            
-            btn.disabled = false;
-            btn.innerHTML = '📊 Calculate PEGY';
+            fetch('/api/calculate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(function(res) {
+                if (res.ok) return res.json();
+                return res.json().then(function(err) { throw new Error(err.detail || 'Failed'); });
+            })
+            .then(function(result) {
+                console.log('Saved:', result);
+                document.getElementById('pegyForm').reset();
+                document.getElementById('epsPeriod').value = 'annual';
+                document.getElementById('epsGrowth').value = '';
+                document.getElementById('epsGrowth').style.color = '#e2e8f0';
+                loadRecords();
+            })
+            .catch(function(error) {
+                alert('Error: ' + error.message);
+            })
+            .finally(function() {
+                btn.disabled = false;
+                btn.innerHTML = '📊 Calculate PEGY';
+            });
         });
 
         // ===== Delete Record =====
-        async function deleteRecord(id) {
+        function deleteRecord(id) {
             if (!confirm('Delete this record?')) return;
-            try {
-                var res = await fetch('/api/records/' + id, { method: 'DELETE' });
-                if (res.ok) await loadRecords();
-            } catch (error) {
-                alert('Error deleting record');
-            }
+            fetch('/api/records/' + id, { method: 'DELETE' })
+                .then(function(res) {
+                    if (res.ok) loadRecords();
+                })
+                .catch(function(error) {
+                    alert('Error deleting record');
+                });
         }
 
         // ===== Init =====
@@ -333,88 +331,93 @@ async def health_check_head():
 @app.post("/api/calculate")
 async def calculate_pegy(data: PEGYInput):
     """Calculate PEGY Ratio and save to database"""
-    
-    pe_ratio = round(data.current_price / data.eps, 2)
-    
-    if data.eps_period == "quarterly":
-        annual_eps = data.eps * 4
-        pe_ratio = round(data.current_price / annual_eps, 2)
-    else:
-        annual_eps = data.eps
-    
-    peg_ratio = None
-    if data.eps_growth and data.eps_growth > 0:
-        peg_ratio = round(pe_ratio / data.eps_growth, 2)
-    
-    pegy_ratio = None
-    if data.eps_growth and data.eps_growth > 0:
-        total_return = data.eps_growth + data.dividend_yield
-        if total_return > 0:
-            pegy_ratio = round(pe_ratio / total_return, 2)
-    
-    if pegy_ratio is not None:
-        if pegy_ratio < 1:
-            status = "Excellent - Undervalued"
-            color = "#27ae60"
-        elif pegy_ratio < 2:
-            status = "Good - Fairly Valued"
-            color = "#2ecc71"
-        elif pegy_ratio < 3:
-            status = "Average - Slightly Overvalued"
-            color = "#f39c12"
+    try:
+        pe_ratio = round(data.current_price / data.eps, 2)
+        
+        if data.eps_period == "quarterly":
+            annual_eps = data.eps * 4
+            pe_ratio = round(data.current_price / annual_eps, 2)
         else:
-            status = "Poor - Highly Overvalued"
-            color = "#e74c3c"
-    else:
-        status = "N/A - Need EPS Growth Rate"
-        color = "#95a5a6"
-    
-    doc = {
-        "symbol": data.symbol.upper(),
-        "eps": annual_eps if data.eps_period == "quarterly" else data.eps,
-        "eps_old": data.eps_old,
-        "eps_period": data.eps_period,
-        "dividend_yield": data.dividend_yield,
-        "eps_growth": data.eps_growth,
-        "current_price": data.current_price,
-        "pe_ratio": pe_ratio,
-        "peg_ratio": peg_ratio,
-        "pegy_ratio": pegy_ratio,
-        "status": status,
-        "color": color,
-        "created_at": datetime.utcnow(),
-    }
-    
-    result = await pegy_collection.insert_one(doc)
-    
-    return {
-        "id": str(result.inserted_id),
-        "symbol": doc["symbol"],
-        "pe_ratio": doc["pe_ratio"],
-        "peg_ratio": doc["peg_ratio"],
-        "pegy_ratio": doc["pegy_ratio"],
-        "status": doc["status"],
-        "color": doc["color"],
-    }
+            annual_eps = data.eps
+        
+        peg_ratio = None
+        if data.eps_growth and data.eps_growth > 0:
+            peg_ratio = round(pe_ratio / data.eps_growth, 2)
+        
+        pegy_ratio = None
+        if data.eps_growth and data.eps_growth > 0:
+            total_return = data.eps_growth + data.dividend_yield
+            if total_return > 0:
+                pegy_ratio = round(pe_ratio / total_return, 2)
+        
+        if pegy_ratio is not None:
+            if pegy_ratio < 1:
+                status = "Excellent - Undervalued"
+                color = "#27ae60"
+            elif pegy_ratio < 2:
+                status = "Good - Fairly Valued"
+                color = "#2ecc71"
+            elif pegy_ratio < 3:
+                status = "Average - Slightly Overvalued"
+                color = "#f39c12"
+            else:
+                status = "Poor - Highly Overvalued"
+                color = "#e74c3c"
+        else:
+            status = "N/A - Need EPS Growth Rate"
+            color = "#95a5a6"
+        
+        doc = {
+            "symbol": data.symbol.upper(),
+            "eps": annual_eps if data.eps_period == "quarterly" else data.eps,
+            "eps_old": data.eps_old,
+            "eps_period": data.eps_period,
+            "dividend_yield": data.dividend_yield,
+            "eps_growth": data.eps_growth,
+            "current_price": data.current_price,
+            "pe_ratio": pe_ratio,
+            "peg_ratio": peg_ratio,
+            "pegy_ratio": pegy_ratio,
+            "status": status,
+            "color": color,
+            "created_at": datetime.utcnow(),
+        }
+        
+        result = await pegy_collection.insert_one(doc)
+        
+        return {
+            "id": str(result.inserted_id),
+            "symbol": doc["symbol"],
+            "pe_ratio": doc["pe_ratio"],
+            "peg_ratio": doc["peg_ratio"],
+            "pegy_ratio": doc["pegy_ratio"],
+            "status": doc["status"],
+            "color": doc["color"],
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Error: {str(e)}")
 
 @app.get("/api/records")
 async def get_records():
     """Get all records sorted by PEGY ratio (ascending)"""
     records = await pegy_collection.find().sort("pegy_ratio", 1).to_list(100)
+    result = []
     for r in records:
         r["_id"] = str(r["_id"])
-    return records
+        result.append(r)
+    return result
 
 @app.delete("/api/records/{record_id}")
 async def delete_record(record_id: str):
     """Delete a record"""
     try:
-        result = await pegy_collection.delete_one({"_id": ObjectId(record_id)})
+        obj_id = ObjectId(record_id)
+        result = await pegy_collection.delete_one({"_id": obj_id})
         if result.deleted_count:
             return {"message": "Deleted successfully"}
         raise HTTPException(404, "Record not found")
-    except:
-        raise HTTPException(400, "Invalid ID")
+    except Exception as e:
+        raise HTTPException(400, f"Invalid ID: {str(e)}")
 
 # ---------------------- Manifest ----------------------
 @app.get("/manifest.json")
@@ -425,7 +428,7 @@ async def manifest():
 @app.get("/static/sw.js")
 async def service_worker():
     sw_js = """
-const CACHE_NAME = 'pegy-calc-v4';
+const CACHE_NAME = 'pegy-calc-v5';
 const ASSETS = ['/', '/static/manifest.json', '/static/icon-192.png', '/static/icon-512.png'];
 
 self.addEventListener('install', (event) => {
