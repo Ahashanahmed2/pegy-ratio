@@ -27,24 +27,38 @@ async def home(request: Request):
         r["_id"] = str(r["_id"])
     
     # Build table rows
-    table_rows = ""
-    if records:
-        for r in records:
-            gc = "#27ae60" if (r.get("eps_growth") and r["eps_growth"] >= 0) else "#e74c3c"
-            table_rows += f"""<tr>
-                <td><b style="color:#60a5fa;">{r.get('symbol','-')}</b></td>
-                <td>{float(r.get('eps',0)):.2f}</td>
-                <td>{float(r['eps_old']):.2f}</td>
-                <td style="color:{gc};font-weight:bold;">{float(r['eps_growth']):.2f}%</td>
-                <td>{float(r.get('dividend_yield',0)):.2f}%</td>
-                <td>{float(r.get('pe_ratio',0)):.2f}</td>
-                <td>{float(r['peg_ratio']):.2f if r.get('peg_ratio') else '-'}</td>
-                <td><b style="color:{r.get('color','#fff')};">{float(r['pegy_ratio']):.2f if r.get('pegy_ratio') else '-'}</b></td>
-                <td><span style="background:{r.get('color','#95a5a6')};color:white;padding:3px 10px;border-radius:10px;font-size:12px;">{r.get('status','-').split(' - ')[0]}</span></td>
-                <td><a href="/delete/{r['_id']}" style="color:#e74c3c;text-decoration:none;font-size:18px;" onclick="return confirm('Delete?')">🗑</a></td>
-            </tr>"""
-    else:
-        table_rows = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:30px;">No records yet</td></tr>'
+table_rows = ""
+if records:
+    for r in records:
+        # Safe get values
+        symbol = r.get('symbol', '-')
+        eps_val = f"{r['eps']:.2f}" if r.get('eps') is not None else '-'
+        eps_old_val = f"{r['eps_old']:.2f}" if r.get('eps_old') is not None else '-'
+        growth_val = f"{r['eps_growth']:.2f}%" if r.get('eps_growth') is not None else '-'
+        div_val = f"{r['dividend_yield']:.2f}%" if r.get('dividend_yield') is not None else '-'
+        pe_val = f"{r['pe_ratio']:.2f}" if r.get('pe_ratio') is not None else '-'
+        peg_val = f"{r['peg_ratio']:.2f}" if r.get('peg_ratio') is not None else '-'
+        pegy_val = f"{r['pegy_ratio']:.2f}" if r.get('pegy_ratio') is not None else '-'
+        color = r.get('color', '#fff')
+        status = r.get('status', '-')
+        if ' - ' in status:
+            status = status.split(' - ')[0]
+        gc = "#27ae60" if (r.get('eps_growth') is not None and r['eps_growth'] >= 0) else "#e74c3c"
+        
+        table_rows += f"""<tr>
+            <td><b style="color:#60a5fa;">{symbol}</b></td>
+            <td>{eps_val}</td>
+            <td>{eps_old_val}</td>
+            <td style="color:{gc};font-weight:bold;">{growth_val}</td>
+            <td>{div_val}</td>
+            <td>{pe_val}</td>
+            <td>{peg_val}</td>
+            <td><b style="color:{color};">{pegy_val}</b></td>
+            <td><span style="background:{color};color:white;padding:3px 10px;border-radius:10px;font-size:12px;">{status}</span></td>
+            <td><a href="/delete/{r['_id']}" style="color:#e74c3c;text-decoration:none;font-size:18px;" onclick="return confirm('Delete?')">🗑</a></td>
+        </tr>"""
+else:
+    table_rows = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:30px;">No records yet</td></tr>'
     
     html = f"""<!DOCTYPE html>
 <html lang="en">
