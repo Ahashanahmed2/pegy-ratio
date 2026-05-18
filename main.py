@@ -29,37 +29,46 @@ async def home(request: Request):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PEGY Ratio Calculator</title>
     <link rel="manifest" href="/manifest.json">
-    <link rel="icon" href="/static/icon-192.png">
-    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
     <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background: #0f172a; color: white; padding: 20px; font-family: Arial; }
-        .card { background: #1e293b; border-radius: 15px; padding: 25px; margin-bottom: 20px; }
-        .form-control, .form-select { background: #334155; color: white; border: 1px solid #475569; padding: 10px; border-radius: 8px; width: 100%; }
-        .form-control:focus { background: #334155; color: white; outline: none; }
-        label { font-weight: 600; margin-top: 10px; display: block; }
-        .btn-primary { background: #3b82f6; border: none; padding: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; color: white; font-size: 16px; }
+        * { box-sizing: border-box; }
+        body { background: #0f172a; color: white; padding: 20px; font-family: Arial, sans-serif; }
+        .card { background: #1e293b; border-radius: 15px; padding: 25px; margin-bottom: 20px; border: 1px solid #334155; }
+        .form-control, .form-select { background: #334155; color: white !important; border: 1px solid #475569; padding: 12px; border-radius: 8px; width: 100%; font-size: 16px; }
+        .form-control:focus, .form-select:focus { background: #334155; color: white !important; outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.3); }
+        .form-control::placeholder { color: #94a3b8; }
+        label { font-weight: 600; margin-top: 12px; margin-bottom: 4px; display: block; color: #e2e8f0; font-size: 14px; }
+        .btn-primary { background: #3b82f6; border: none; padding: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; color: white; font-size: 16px; margin-top: 15px; }
         .btn-primary:hover { background: #2563eb; }
-        .btn-danger { background: #e74c3c; border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+        .btn-primary:disabled { background: #64748b; cursor: not-allowed; }
+        .btn-danger { background: #e74c3c; border: none; color: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn-danger:hover { background: #c0392b; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background: #334155; padding: 12px; text-align: left; }
-        td { padding: 12px; border-bottom: 1px solid #334155; }
-        .install-btn { background: #10b981; color: white; padding: 12px 24px; border-radius: 25px; border: none; cursor: pointer; display: none; margin-bottom: 15px; font-size: 16px; font-weight: bold; }
-        .install-btn:hover { background: #059669; }
-        h1 { text-align: center; margin-bottom: 25px; }
-        h4 { margin-bottom: 20px; }
+        th { background: #334155; padding: 12px; text-align: left; font-size: 13px; color: #e2e8f0; }
+        td { padding: 12px; border-bottom: 1px solid #334155; font-size: 14px; }
+        tr:hover { background: rgba(59,130,246,0.05); }
+        .install-btn { background: #10b981; color: white; padding: 14px 28px; border-radius: 25px; border: none; cursor: pointer; display: none; margin-bottom: 20px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 15px rgba(16,185,129,0.3); }
+        .install-btn:hover { background: #059669; transform: translateY(-1px); }
+        h1 { text-align: center; margin-bottom: 25px; font-size: 28px; }
+        h4 { margin-bottom: 20px; color: #e2e8f0; }
         .row { display: flex; flex-wrap: wrap; gap: 15px; }
-        .col-md-6 { flex: 1 1 48%; }
-        .col-md-3 { flex: 1 1 23%; }
-        .col-md-4 { flex: 1 1 31%; }
+        .col-md-6 { flex: 1 1 48%; min-width: 200px; }
+        .col-md-3 { flex: 1 1 23%; min-width: 150px; }
+        .col-md-4 { flex: 1 1 31%; min-width: 180px; }
+        .badge-status { color: white; padding: 5px 14px; border-radius: 15px; font-size: 12px; font-weight: bold; white-space: nowrap; }
         @media (max-width: 768px) {
             .col-md-6, .col-md-3, .col-md-4 { flex: 1 1 100%; }
+            h1 { font-size: 22px; }
         }
     </style>
 </head>
 <body>
-    <div class="container" style="max-width: 900px; margin: 0 auto;">
+    <div class="container" style="max-width: 950px; margin: 0 auto;">
         <h1>📊 PEGY Ratio Calculator</h1>
         
         <div style="text-align: center;">
@@ -68,39 +77,39 @@ async def home(request: Request):
 
         <div class="card">
             <h4>📝 Input Stock Data</h4>
-            <form id="pegyForm">
+            <form id="pegyForm" autocomplete="off">
                 <div class="row">
                     <div class="col-md-6">
-                        <label>Symbol *</label>
-                        <input type="text" class="form-control" id="symbol" placeholder="e.g., CITYBANK" required>
+                        <label>🏷️ Symbol *</label>
+                        <input type="text" class="form-control" id="symbol" placeholder="e.g., CITYBANK" required autocomplete="off">
                     </div>
                     <div class="col-md-3">
-                        <label>EPS *</label>
-                        <input type="number" step="0.01" class="form-control" id="eps" placeholder="0.00" required>
+                        <label>💰 EPS *</label>
+                        <input type="number" step="0.01" class="form-control" id="eps" placeholder="e.g., 4.88" required>
                     </div>
                     <div class="col-md-3">
-                        <label>EPS Period *</label>
+                        <label>📅 EPS Period *</label>
                         <select class="form-select" id="epsPeriod" required>
-                            <option value="annual">Annual</option>
-                            <option value="quarterly">Quarterly</option>
+                            <option value="annual">📆 Annual</option>
+                            <option value="quarterly">📋 Quarterly</option>
                         </select>
                     </div>
                 </div>
                 <div class="row mt-2">
                     <div class="col-md-4">
-                        <label>Dividend Yield (%) *</label>
-                        <input type="number" step="0.01" class="form-control" id="dividendYield" placeholder="5.60" required>
+                        <label>💵 Dividend Yield (%) *</label>
+                        <input type="number" step="0.01" class="form-control" id="dividendYield" placeholder="e.g., 5.60" required>
                     </div>
                     <div class="col-md-4">
-                        <label>EPS Growth 3Yr (%)</label>
-                        <input type="number" step="0.01" class="form-control" id="epsGrowth" placeholder="11.70">
+                        <label>📈 EPS Growth 3Yr (%)</label>
+                        <input type="number" step="0.01" class="form-control" id="epsGrowth" placeholder="e.g., 11.70">
                     </div>
                     <div class="col-md-4">
-                        <label>Current Price *</label>
-                        <input type="number" step="0.01" class="form-control" id="currentPrice" placeholder="25.00" required>
+                        <label>💹 Current Price *</label>
+                        <input type="number" step="0.01" class="form-control" id="currentPrice" placeholder="e.g., 25.00" required>
                     </div>
                 </div>
-                <button type="submit" class="btn-primary mt-3">📊 Calculate PEGY</button>
+                <button type="submit" class="btn-primary">📊 Calculate PEGY</button>
             </form>
         </div>
 
@@ -122,7 +131,7 @@ async def home(request: Request):
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr><td colspan="9" style="text-align: center; color: #94a3b8;">Loading...</td></tr>
+                        <tr><td colspan="9" style="text-align: center; color: #94a3b8; padding: 30px;">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -130,64 +139,91 @@ async def home(request: Request):
     </div>
 
     <script>
-        // PWA Install
+        // ===== PWA Install =====
         let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
+        
+        window.addEventListener('beforeinstallprompt', function(e) {
             e.preventDefault();
             deferredPrompt = e;
-            document.getElementById('installBtn').style.display = 'inline-block';
+            var btn = document.getElementById('installBtn');
+            if (btn) {
+                btn.style.display = 'inline-block';
+            }
+            console.log('✅ beforeinstallprompt fired - Install button visible');
+        });
+
+        window.addEventListener('appinstalled', function() {
+            var btn = document.getElementById('installBtn');
+            if (btn) btn.style.display = 'none';
+            deferredPrompt = null;
+            console.log('✅ App installed');
         });
 
         function installApp() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
+                deferredPrompt.userChoice.then(function(choiceResult) {
                     if (choiceResult.outcome === 'accepted') {
-                        console.log('✅ User installed the app');
+                        console.log('✅ User accepted install');
+                        document.getElementById('installBtn').style.display = 'none';
+                    } else {
+                        console.log('❌ User dismissed install');
                     }
                     deferredPrompt = null;
-                    document.getElementById('installBtn').style.display = 'none';
                 });
+            } else {
+                alert('Install not available. Open in Chrome/Edge and try again.');
             }
         }
 
-        // Hide button if already installed
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            document.getElementById('installBtn').style.display = 'none';
+        // Hide if already in standalone mode
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+            var btn = document.getElementById('installBtn');
+            if (btn) btn.style.display = 'none';
         }
 
-        // Service Worker
+        // ===== Service Worker =====
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/sw.js');
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/static/sw.js').then(function(reg) {
+                    console.log('✅ SW registered:', reg.scope);
+                }).catch(function(err) {
+                    console.log('⚠️ SW failed:', err);
+                });
+            });
         }
 
-        // Load Records
+        // ===== Load Records =====
         async function loadRecords() {
-            var res = await fetch('/api/records');
-            var records = await res.json();
-            var tbody = document.getElementById('tableBody');
-            
-            if (records.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #94a3b8;">No records yet</td></tr>';
-                return;
+            try {
+                var res = await fetch('/api/records');
+                var records = await res.json();
+                var tbody = document.getElementById('tableBody');
+                
+                if (!records || records.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #94a3b8; padding: 30px;">No records yet. Add your first stock!</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = records.map(function(r) {
+                    return '<tr>' +
+                        '<td><strong style="color:#60a5fa;">' + r.symbol + '</strong></td>' +
+                        '<td>' + (r.eps ? r.eps.toFixed(2) : '-') + '</td>' +
+                        '<td>' + (r.dividend_yield != null ? r.dividend_yield.toFixed(2) + '%' : '-') + '</td>' +
+                        '<td>' + (r.eps_growth != null ? r.eps_growth.toFixed(2) + '%' : 'N/A') + '</td>' +
+                        '<td>' + (r.pe_ratio ? r.pe_ratio.toFixed(2) : '-') + '</td>' +
+                        '<td>' + (r.peg_ratio != null ? r.peg_ratio.toFixed(2) : 'N/A') + '</td>' +
+                        '<td><strong style="color: ' + r.color + '; font-size: 16px;">' + (r.pegy_ratio != null ? r.pegy_ratio.toFixed(2) : 'N/A') + '</strong></td>' +
+                        '<td><span class="badge-status" style="background: ' + r.color + ';">' + (r.status ? r.status.split(' - ')[0] : '-') + '</span></td>' +
+                        '<td><button onclick="deleteRecord(\'' + r._id + '\')" class="btn-danger">🗑</button></td>' +
+                    '</tr>';
+                }).join('');
+            } catch (error) {
+                console.error('Load error:', error);
             }
-            
-            tbody.innerHTML = records.map(function(r) {
-                return '<tr>' +
-                    '<td><strong>' + r.symbol + '</strong></td>' +
-                    '<td>' + (r.eps ? r.eps.toFixed(2) : '-') + '</td>' +
-                    '<td>' + (r.dividend_yield ? r.dividend_yield.toFixed(2) + '%' : '-') + '</td>' +
-                    '<td>' + (r.eps_growth ? r.eps_growth.toFixed(2) + '%' : 'N/A') + '</td>' +
-                    '<td>' + (r.pe_ratio ? r.pe_ratio.toFixed(2) : '-') + '</td>' +
-                    '<td>' + (r.peg_ratio ? r.peg_ratio.toFixed(2) : 'N/A') + '</td>' +
-                    '<td><strong style="color: ' + r.color + ';">' + (r.pegy_ratio ? r.pegy_ratio.toFixed(2) : 'N/A') + '</strong></td>' +
-                    '<td><span style="background: ' + r.color + '; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px;">' + (r.status ? r.status.split(' - ')[0] : '-') + '</span></td>' +
-                    '<td><button onclick="deleteRecord(\'' + r._id + '\')" class="btn-danger">🗑</button></td>' +
-                '</tr>';
-            }).join('');
         }
 
-        // Form Submit
+        // ===== Form Submit =====
         document.getElementById('pegyForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var btn = this.querySelector('button[type="submit"]');
@@ -212,27 +248,32 @@ async def home(request: Request):
                 
                 if (res.ok) {
                     document.getElementById('pegyForm').reset();
-                    loadRecords();
+                    document.getElementById('epsPeriod').value = 'annual';
+                    await loadRecords();
                 } else {
                     var err = await res.json();
                     alert('Error: ' + (err.detail || 'Failed'));
                 }
             } catch (error) {
-                alert('Error: ' + error.message);
+                alert('Network Error: ' + error.message);
             }
             
             btn.disabled = false;
             btn.innerHTML = '📊 Calculate PEGY';
         });
 
-        // Delete Record
+        // ===== Delete Record =====
         async function deleteRecord(id) {
             if (!confirm('Delete this record?')) return;
-            var res = await fetch('/api/records/' + id, { method: 'DELETE' });
-            if (res.ok) loadRecords();
+            try {
+                var res = await fetch('/api/records/' + id, { method: 'DELETE' });
+                if (res.ok) await loadRecords();
+            } catch (error) {
+                alert('Error deleting record');
+            }
         }
 
-        // Initial load
+        // ===== Init =====
         loadRecords();
     </script>
 </body>
@@ -343,7 +384,7 @@ async def manifest():
 @app.get("/static/sw.js")
 async def service_worker():
     sw_js = """
-const CACHE_NAME = 'pegy-calc-v2';
+const CACHE_NAME = 'pegy-calc-v3';
 const ASSETS = ['/', '/static/manifest.json'];
 
 self.addEventListener('install', (event) => {
