@@ -27,120 +27,78 @@ async def home(request: Request):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PEGY Ratio Calculator</title>
+    <title>PEGY Calculator</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" href="/static/icon-192.png">
     <link rel="apple-touch-icon" href="/static/icon-192.png">
     <meta name="theme-color" content="#3b82f6">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0f172a; color: white; padding: 15px; font-family: Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-        .card { background: #1e293b; border-radius: 15px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; }
-        .form-control, .form-select { background: #334155; color: white !important; border: 1px solid #475569; padding: 14px; border-radius: 10px; width: 100%; font-size: 16px; -webkit-appearance: none; }
-        .form-control:focus, .form-select:focus { background: #334155; color: white !important; outline: none; border-color: #3b82f6; }
-        .form-control::placeholder { color: #94a3b8; }
-        .form-control[readonly] { background: #1a2744 !important; font-weight: bold; font-size: 18px; cursor: default; }
-        label { font-weight: 600; margin-top: 14px; margin-bottom: 6px; display: block; color: #e2e8f0; font-size: 14px; }
-        .btn-primary { background: #3b82f6; border: none; padding: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; color: white; font-size: 18px; margin-top: 20px; }
-        .btn-primary:active { background: #2563eb; transform: scale(0.98); }
-        .btn-primary:disabled { background: #64748b; cursor: not-allowed; }
-        .btn-danger { background: #e74c3c; border: none; color: white; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 16px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
-        th { background: #334155; padding: 10px 8px; text-align: left; font-size: 12px; color: #e2e8f0; white-space: nowrap; }
-        td { padding: 10px 8px; border-bottom: 1px solid #334155; font-size: 13px; }
-        .install-btn { background: #10b981; color: white; padding: 14px 28px; border-radius: 30px; border: none; cursor: pointer; display: none; margin-bottom: 15px; font-size: 18px; font-weight: bold; width: 100%; max-width: 300px; }
-        .install-btn:active { background: #059669; }
-        h1 { text-align: center; margin-bottom: 20px; font-size: 24px; }
-        .row { display: flex; flex-wrap: wrap; gap: 12px; }
-        .col-md-6 { flex: 1 1 100%; }
-        .col-md-3 { flex: 1 1 100%; }
-        .col-md-4 { flex: 1 1 100%; }
-        @media (min-width: 768px) {
-            .col-md-6 { flex: 1 1 48%; }
-            .col-md-3 { flex: 1 1 23%; }
-            .col-md-4 { flex: 1 1 31%; }
-            body { padding: 30px; }
-        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#0f172a; color:white; padding:10px; font-family:Arial,sans-serif; }
+        .card { background:#1e293b; border-radius:15px; padding:15px; margin-bottom:15px; border:1px solid #334155; }
+        input, select { background:#334155; color:white !important; border:1px solid #475569; padding:14px; border-radius:10px; width:100%; font-size:16px; margin-top:8px; }
+        input:focus, select:focus { outline:none; border-color:#3b82f6; }
+        input::placeholder { color:#94a3b8; }
+        input[readonly] { background:#1a2744; font-weight:bold; font-size:18px; }
+        label { font-weight:600; margin-top:12px; display:block; color:#e2e8f0; font-size:14px; }
+        .btn-submit { background:#3b82f6; border:none; padding:16px; font-weight:bold; border-radius:10px; width:100%; color:white; font-size:18px; margin-top:20px; cursor:pointer; }
+        .btn-submit:active { background:#2563eb; }
+        .btn-delete { background:#e74c3c; border:none; color:white; padding:8px 12px; border-radius:6px; cursor:pointer; font-size:14px; }
+        table { width:100%; border-collapse:collapse; margin-top:10px; font-size:12px; }
+        th { background:#334155; padding:8px 6px; text-align:left; font-size:11px; color:#e2e8f0; }
+        td { padding:8px 6px; border-bottom:1px solid #334155; font-size:12px; }
+        .install-btn { background:#10b981; color:white; padding:14px; border-radius:30px; border:none; cursor:pointer; display:none; margin-bottom:10px; font-size:16px; font-weight:bold; width:100%; }
+        h1 { text-align:center; margin-bottom:15px; font-size:22px; }
+        h4 { margin-bottom:10px; font-size:16px; }
     </style>
 </head>
 <body>
-    <div class="container" style="max-width: 950px; margin: 0 auto;">
-        <h1>📊 PEGY Ratio Calculator</h1>
+    <div style="max-width:600px;margin:0 auto;">
+        <h1>📊 PEGY Calculator</h1>
         
-        <div style="text-align: center;">
-            <button id="installBtn" class="install-btn" onclick="installApp()">📲 Install App</button>
-        </div>
+        <button id="installBtn" class="install-btn" onclick="installApp()">📲 Install App</button>
 
         <div class="card">
-            <h4 style="margin-bottom: 15px;">📝 Input Stock Data</h4>
-            <form id="pegyForm" autocomplete="off" onsubmit="handleSubmit(event); return false;">
-                <div class="row">
-                    <div class="col-md-6">
-                        <label>🏷️ Symbol *</label>
-                        <input type="text" class="form-control" id="symbol" placeholder="CITYBANK" required autocomplete="off">
-                    </div>
-                    <div class="col-md-3">
-                        <label>📅 Period *</label>
-                        <select class="form-select" id="epsPeriod" required>
-                            <option value="annual">📆 Annual</option>
-                            <option value="quarterly">📋 Quarterly</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label>💹 Price *</label>
-                        <input type="number" step="0.01" class="form-control" id="currentPrice" placeholder="25.00" required>
-                    </div>
-                </div>
-
-                <div class="row mt-2">
-                    <div class="col-md-4">
-                        <label>📊 Current EPS *</label>
-                        <input type="number" step="0.01" class="form-control" id="epsCurrent" placeholder="4.88" required oninput="autoCalcGrowth()">
-                    </div>
-                    <div class="col-md-4">
-                        <label>📊 Old EPS (3Yr) *</label>
-                        <input type="number" step="0.01" class="form-control" id="epsOld" placeholder="3.50" required oninput="autoCalcGrowth()">
-                    </div>
-                    <div class="col-md-4">
-                        <label>📈 Growth 3Yr (%)</label>
-                        <input type="text" class="form-control" id="epsGrowth" placeholder="Auto" readonly>
-                    </div>
-                </div>
-
-                <div class="row mt-2">
-                    <div class="col-md-6">
-                        <label>💵 Dividend Yield (%) *</label>
-                        <input type="number" step="0.01" class="form-control" id="dividendYield" placeholder="5.60" required>
-                    </div>
-                </div>
-
-                <button type="submit" class="btn-primary" id="submitBtn">📊 Calculate PEGY</button>
+            <h4>📝 Input Data</h4>
+            <form id="pegyForm" autocomplete="off" onsubmit="return false;">
+                <label>🏷️ Symbol *</label>
+                <input type="text" id="symbol" placeholder="CITYBANK" required>
+                
+                <label>📅 Period *</label>
+                <select id="epsPeriod" required>
+                    <option value="annual">📆 Annual</option>
+                    <option value="quarterly">📋 Quarterly</option>
+                </select>
+                
+                <label>💹 Current Price *</label>
+                <input type="number" step="0.01" id="currentPrice" placeholder="25.00" required>
+                
+                <label>📊 Current EPS *</label>
+                <input type="number" step="0.01" id="epsCurrent" placeholder="4.88" required oninput="calcGrowth()">
+                
+                <label>📊 Old EPS (3Yr Ago) *</label>
+                <input type="number" step="0.01" id="epsOld" placeholder="3.50" required oninput="calcGrowth()">
+                
+                <label>📈 EPS Growth 3Yr (%)</label>
+                <input type="text" id="epsGrowth" placeholder="Auto" readonly>
+                
+                <label>💵 Dividend Yield (%) *</label>
+                <input type="number" step="0.01" id="dividendYield" placeholder="5.60" required>
             </form>
+            <button class="btn-submit" id="submitBtn" onclick="submitData()">📊 Calculate PEGY</button>
         </div>
 
         <div class="card">
-            <h4 style="margin-bottom: 15px;">📊 PEGY Rankings</h4>
-            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                <table id="resultTable">
+            <h4>📊 Rankings</h4>
+            <div style="overflow-x:auto;">
+                <table>
                     <thead>
-                        <tr>
-                            <th>Symbol</th>
-                            <th>EPS</th>
-                            <th>Old</th>
-                            <th>Grow</th>
-                            <th>Div</th>
-                            <th>P/E</th>
-                            <th>PEG</th>
-                            <th>PEGY</th>
-                            <th>Status</th>
-                            <th>Del</th>
-                        </tr>
+                        <tr><th>Symbol</th><th>EPS</th><th>Old</th><th>Grw</th><th>Div</th><th>P/E</th><th>PEG</th><th>PEGY</th><th>Status</th><th></th></tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr><td colspan="10" style="text-align: center; color: #94a3b8; padding: 30px;">Loading...</td></tr>
+                        <tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:20px;">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -148,111 +106,88 @@ async def home(request: Request):
     </div>
 
     <script>
-        // ===== Auto Calculate EPS Growth =====
-        function autoCalcGrowth() {
-            var currentEps = parseFloat(document.getElementById('epsCurrent').value);
-            var oldEps = parseFloat(document.getElementById('epsOld').value);
-            var growthField = document.getElementById('epsGrowth');
-            
-            if (currentEps > 0 && oldEps > 0) {
-                var growth = (Math.pow((currentEps / oldEps), (1/3)) - 1) * 100;
-                growthField.value = growth.toFixed(2) + '%';
-                growthField.style.color = growth >= 0 ? '#27ae60' : '#e74c3c';
+        function calcGrowth() {
+            var c = parseFloat(document.getElementById('epsCurrent').value);
+            var o = parseFloat(document.getElementById('epsOld').value);
+            var f = document.getElementById('epsGrowth');
+            if (c > 0 && o > 0) {
+                var g = (Math.pow((c/o), (1/3)) - 1) * 100;
+                f.value = g.toFixed(2) + '%';
+                f.style.color = g >= 0 ? '#27ae60' : '#e74c3c';
             } else {
-                growthField.value = '';
-                growthField.style.color = '#e2e8f0';
+                f.value = '';
+                f.style.color = '#e2e8f0';
             }
         }
 
-        // ===== PWA Install =====
         var deferredPrompt;
-        
         window.addEventListener('beforeinstallprompt', function(e) {
             e.preventDefault();
             deferredPrompt = e;
-            var btn = document.getElementById('installBtn');
-            if (btn) btn.style.display = 'block';
+            document.getElementById('installBtn').style.display = 'block';
         });
-
         function installApp() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
-                deferredPrompt.userChoice.then(function(result) {
-                    if (result.outcome === 'accepted') {
-                        document.getElementById('installBtn').style.display = 'none';
-                    }
+                deferredPrompt.userChoice.then(function(r) {
+                    if (r.outcome === 'accepted') document.getElementById('installBtn').style.display = 'none';
                     deferredPrompt = null;
                 });
-            } else {
-                alert('Open in Chrome/Edge to install');
             }
         }
-
         if (window.matchMedia('(display-mode: standalone)').matches) {
-            var btn = document.getElementById('installBtn');
-            if (btn) btn.style.display = 'none';
+            document.getElementById('installBtn').style.display = 'none';
         }
 
-        // ===== Service Worker =====
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/static/sw.js');
         }
 
-        // ===== Load Records =====
         function loadRecords() {
             fetch('/api/records')
-                .then(function(res) { return res.json(); })
-                .then(function(records) {
-                    var tbody = document.getElementById('tableBody');
-                    
-                    if (!records || records.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: #94a3b8; padding: 30px;">No records yet</td></tr>';
-                        return;
-                    }
-                    
-                    var html = '';
-                    for (var i = 0; i < records.length; i++) {
-                        var r = records[i];
-                        var gc = (r.eps_growth != null && r.eps_growth >= 0) ? '#27ae60' : '#e74c3c';
-                        html += '<tr>' +
-                            '<td><strong style="color:#60a5fa;">' + (r.symbol || '-') + '</strong></td>' +
-                            '<td>' + (r.eps != null ? Number(r.eps).toFixed(2) : '-') + '</td>' +
-                            '<td>' + (r.eps_old != null ? Number(r.eps_old).toFixed(2) : '-') + '</td>' +
-                            '<td style="color:' + gc + ';font-weight:bold;">' + (r.eps_growth != null ? Number(r.eps_growth).toFixed(2) + '%' : '-') + '</td>' +
-                            '<td>' + (r.dividend_yield != null ? Number(r.dividend_yield).toFixed(2) + '%' : '-') + '</td>' +
-                            '<td>' + (r.pe_ratio != null ? Number(r.pe_ratio).toFixed(2) : '-') + '</td>' +
-                            '<td>' + (r.peg_ratio != null ? Number(r.peg_ratio).toFixed(2) : '-') + '</td>' +
-                            '<td><strong style="color:' + (r.color || '#fff') + ';">' + (r.pegy_ratio != null ? Number(r.pegy_ratio).toFixed(2) : '-') + '</strong></td>' +
-                            '<td><span style="background:' + (r.color || '#95a5a6') + ';color:white;padding:4px 8px;border-radius:10px;font-size:11px;font-weight:bold;">' + (r.status ? r.status.split(' - ')[0] : '-') + '</span></td>' +
-                            '<td><button onclick="deleteRecord(\'' + r._id + '\')" class="btn-danger" style="padding:6px 10px;font-size:14px;">🗑</button></td>' +
-                        '</tr>';
-                    }
-                    tbody.innerHTML = html;
-                })
-                .catch(function(error) {
-                    console.error('Load error:', error);
-                });
+            .then(function(r) { return r.json(); })
+            .then(function(records) {
+                var t = document.getElementById('tableBody');
+                if (!records || records.length === 0) {
+                    t.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:20px;">No records</td></tr>';
+                    return;
+                }
+                var h = '';
+                for (var i=0; i<records.length; i++) {
+                    var r = records[i];
+                    var gc = (r.eps_growth != null && r.eps_growth >= 0) ? '#27ae60' : '#e74c3c';
+                    h += '<tr>' +
+                        '<td><b style="color:#60a5fa;">' + (r.symbol||'-') + '</b></td>' +
+                        '<td>' + (r.eps!=null ? Number(r.eps).toFixed(2) : '-') + '</td>' +
+                        '<td>' + (r.eps_old!=null ? Number(r.eps_old).toFixed(2) : '-') + '</td>' +
+                        '<td style="color:'+gc+';">' + (r.eps_growth!=null ? Number(r.eps_growth).toFixed(2)+'%' : '-') + '</td>' +
+                        '<td>' + (r.dividend_yield!=null ? Number(r.dividend_yield).toFixed(2)+'%' : '-') + '</td>' +
+                        '<td>' + (r.pe_ratio!=null ? Number(r.pe_ratio).toFixed(2) : '-') + '</td>' +
+                        '<td>' + (r.peg_ratio!=null ? Number(r.peg_ratio).toFixed(2) : '-') + '</td>' +
+                        '<td><b style="color:'+(r.color||'#fff')+';">' + (r.pegy_ratio!=null ? Number(r.pegy_ratio).toFixed(2) : '-') + '</b></td>' +
+                        '<td><span style="background:'+(r.color||'#95a5a6')+';color:white;padding:2px 8px;border-radius:8px;font-size:11px;">' + (r.status ? r.status.split(' - ')[0] : '-') + '</span></td>' +
+                        '<td><button class="btn-delete" onclick="delRecord(\'' + r._id + '\')">🗑</button></td>' +
+                    '</tr>';
+                }
+                t.innerHTML = h;
+            });
         }
 
-        // ===== Form Submit Handler =====
-        function handleSubmit(e) {
-            if (e) e.preventDefault();
-            
+        function submitData() {
             var btn = document.getElementById('submitBtn');
             btn.disabled = true;
-            btn.innerHTML = '⏳ Calculating...';
+            btn.innerHTML = '⏳ Wait...';
             
-            var growthRaw = document.getElementById('epsGrowth').value.replace('%', '');
-            var growthVal = parseFloat(growthRaw) || null;
+            var gr = document.getElementById('epsGrowth').value.replace('%', '');
             
             var data = {
                 symbol: document.getElementById('symbol').value.toUpperCase().trim(),
                 eps: parseFloat(document.getElementById('epsCurrent').value),
                 eps_old: parseFloat(document.getElementById('epsOld').value) || null,
                 eps_period: document.getElementById('epsPeriod').value,
-                eps_growth: growthVal,
+                eps_growth: parseFloat(gr) || null,
                 dividend_yield: parseFloat(document.getElementById('dividendYield').value),
-                current_price: parseFloat(document.getElementById('currentPrice').value),
+                current_price: parseFloat(document.getElementById('currentPrice').value)
             };
             
             fetch('/api/calculate', {
@@ -260,38 +195,31 @@ async def home(request: Request):
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             })
-            .then(function(res) {
-                if (res.ok) return res.json();
-                return res.json().then(function(err) { throw new Error(err.detail || 'Failed'); });
+            .then(function(r) {
+                if (r.ok) return r.json();
+                return r.json().then(function(e) { throw new Error(e.detail || 'Failed'); });
             })
-            .then(function(result) {
+            .then(function() {
                 document.getElementById('pegyForm').reset();
                 document.getElementById('epsPeriod').value = 'annual';
                 document.getElementById('epsGrowth').value = '';
-                document.getElementById('epsGrowth').style.color = '#e2e8f0';
                 loadRecords();
             })
-            .catch(function(error) {
-                alert('Error: ' + error.message);
+            .catch(function(e) {
+                alert('Error: ' + e.message);
             })
             .finally(function() {
                 btn.disabled = false;
                 btn.innerHTML = '📊 Calculate PEGY';
             });
-            
-            return false;
         }
 
-        // ===== Delete Record =====
-        function deleteRecord(id) {
-            if (!confirm('Delete this record?')) return;
+        function delRecord(id) {
+            if (!confirm('Delete?')) return;
             fetch('/api/records/' + id, { method: 'DELETE' })
-                .then(function(res) {
-                    if (res.ok) loadRecords();
-                });
+            .then(function(r) { if (r.ok) loadRecords(); });
         }
 
-        // ===== Init =====
         loadRecords();
     </script>
 </body>
@@ -408,25 +336,11 @@ async def manifest():
 @app.get("/static/sw.js")
 async def service_worker():
     sw_js = """
-const CACHE_NAME = 'pegy-calc-v7';
+const CACHE_NAME = 'pegy-v8';
 const ASSETS = ['/', '/static/manifest.json', '/static/icon-192.png', '/static/icon-512.png'];
-
-self.addEventListener('install', (event) => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-    );
-    self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-    event.waitUntil(clients.claim());
-});
-
-self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        caches.match(event.request).then((response) => response || fetch(event.request))
-    );
-});
+self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(ASSETS))); self.skipWaiting(); });
+self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
+self.addEventListener('fetch', (e) => { e.respondWith(caches.match(e.request).then((r) => r || fetch(e.request))); });
 """
     return HTMLResponse(content=sw_js, media_type="application/javascript")
 
