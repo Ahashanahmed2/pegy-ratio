@@ -37,31 +37,32 @@ async def home(request: Request):
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0f172a; color: white; padding: 20px; font-family: Arial, sans-serif; }
-        .card { background: #1e293b; border-radius: 15px; padding: 25px; margin-bottom: 20px; border: 1px solid #334155; }
-        .form-control, .form-select { background: #334155; color: white !important; border: 1px solid #475569; padding: 12px; border-radius: 8px; width: 100%; font-size: 16px; }
+        body { background: #0f172a; color: white; padding: 15px; font-family: Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .card { background: #1e293b; border-radius: 15px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; }
+        .form-control, .form-select { background: #334155; color: white !important; border: 1px solid #475569; padding: 14px; border-radius: 10px; width: 100%; font-size: 16px; -webkit-appearance: none; }
         .form-control:focus, .form-select:focus { background: #334155; color: white !important; outline: none; border-color: #3b82f6; }
         .form-control::placeholder { color: #94a3b8; }
         .form-control[readonly] { background: #1a2744 !important; font-weight: bold; font-size: 18px; cursor: default; }
-        label { font-weight: 600; margin-top: 12px; margin-bottom: 4px; display: block; color: #e2e8f0; font-size: 14px; }
-        .btn-primary { background: #3b82f6; border: none; padding: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; color: white; font-size: 16px; margin-top: 15px; }
-        .btn-primary:hover { background: #2563eb; }
+        label { font-weight: 600; margin-top: 14px; margin-bottom: 6px; display: block; color: #e2e8f0; font-size: 14px; }
+        .btn-primary { background: #3b82f6; border: none; padding: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; color: white; font-size: 18px; margin-top: 20px; }
+        .btn-primary:active { background: #2563eb; transform: scale(0.98); }
         .btn-primary:disabled { background: #64748b; cursor: not-allowed; }
-        .btn-danger { background: #e74c3c; border: none; color: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
-        .btn-danger:hover { background: #c0392b; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background: #334155; padding: 12px; text-align: left; font-size: 13px; color: #e2e8f0; }
-        td { padding: 12px; border-bottom: 1px solid #334155; font-size: 14px; }
-        tr:hover { background: rgba(59,130,246,0.05); }
-        .install-btn { background: #10b981; color: white; padding: 12px 24px; border-radius: 25px; border: none; cursor: pointer; display: none; margin-bottom: 15px; font-size: 16px; font-weight: bold; }
-        .install-btn:hover { background: #059669; }
-        h1 { text-align: center; margin-bottom: 25px; }
-        .row { display: flex; flex-wrap: wrap; gap: 15px; }
-        .col-md-6 { flex: 1 1 48%; min-width: 200px; }
-        .col-md-3 { flex: 1 1 23%; min-width: 150px; }
-        .col-md-4 { flex: 1 1 31%; min-width: 180px; }
-        @media (max-width: 768px) {
-            .col-md-6, .col-md-3, .col-md-4 { flex: 1 1 100%; }
+        .btn-danger { background: #e74c3c; border: none; color: white; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        th { background: #334155; padding: 10px 8px; text-align: left; font-size: 12px; color: #e2e8f0; white-space: nowrap; }
+        td { padding: 10px 8px; border-bottom: 1px solid #334155; font-size: 13px; }
+        .install-btn { background: #10b981; color: white; padding: 14px 28px; border-radius: 30px; border: none; cursor: pointer; display: none; margin-bottom: 15px; font-size: 18px; font-weight: bold; width: 100%; max-width: 300px; }
+        .install-btn:active { background: #059669; }
+        h1 { text-align: center; margin-bottom: 20px; font-size: 24px; }
+        .row { display: flex; flex-wrap: wrap; gap: 12px; }
+        .col-md-6 { flex: 1 1 100%; }
+        .col-md-3 { flex: 1 1 100%; }
+        .col-md-4 { flex: 1 1 100%; }
+        @media (min-width: 768px) {
+            .col-md-6 { flex: 1 1 48%; }
+            .col-md-3 { flex: 1 1 23%; }
+            .col-md-4 { flex: 1 1 31%; }
+            body { padding: 30px; }
         }
     </style>
 </head>
@@ -74,68 +75,68 @@ async def home(request: Request):
         </div>
 
         <div class="card">
-            <h4>📝 Input Stock Data</h4>
-            <form id="pegyForm" autocomplete="off">
+            <h4 style="margin-bottom: 15px;">📝 Input Stock Data</h4>
+            <form id="pegyForm" autocomplete="off" onsubmit="handleSubmit(event); return false;">
                 <div class="row">
                     <div class="col-md-6">
                         <label>🏷️ Symbol *</label>
-                        <input type="text" class="form-control" id="symbol" placeholder="e.g., CITYBANK" required autocomplete="off">
+                        <input type="text" class="form-control" id="symbol" placeholder="CITYBANK" required autocomplete="off">
                     </div>
                     <div class="col-md-3">
-                        <label>📅 EPS Period *</label>
+                        <label>📅 Period *</label>
                         <select class="form-select" id="epsPeriod" required>
                             <option value="annual">📆 Annual</option>
                             <option value="quarterly">📋 Quarterly</option>
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label>💹 Current Price *</label>
-                        <input type="number" step="0.01" class="form-control" id="currentPrice" placeholder="e.g., 25.00" required>
+                        <label>💹 Price *</label>
+                        <input type="number" step="0.01" class="form-control" id="currentPrice" placeholder="25.00" required>
                     </div>
                 </div>
 
                 <div class="row mt-2">
                     <div class="col-md-4">
                         <label>📊 Current EPS *</label>
-                        <input type="number" step="0.01" class="form-control" id="epsCurrent" placeholder="e.g., 4.88" required oninput="autoCalcGrowth()">
+                        <input type="number" step="0.01" class="form-control" id="epsCurrent" placeholder="4.88" required oninput="autoCalcGrowth()">
                     </div>
                     <div class="col-md-4">
-                        <label>📊 Old EPS (3 Yrs Ago) *</label>
-                        <input type="number" step="0.01" class="form-control" id="epsOld" placeholder="e.g., 3.50" required oninput="autoCalcGrowth()">
+                        <label>📊 Old EPS (3Yr) *</label>
+                        <input type="number" step="0.01" class="form-control" id="epsOld" placeholder="3.50" required oninput="autoCalcGrowth()">
                     </div>
                     <div class="col-md-4">
-                        <label>📈 EPS Growth 3Yr (%)</label>
-                        <input type="text" class="form-control" id="epsGrowth" placeholder="Auto calculated" readonly>
+                        <label>📈 Growth 3Yr (%)</label>
+                        <input type="text" class="form-control" id="epsGrowth" placeholder="Auto" readonly>
                     </div>
                 </div>
 
                 <div class="row mt-2">
                     <div class="col-md-6">
                         <label>💵 Dividend Yield (%) *</label>
-                        <input type="number" step="0.01" class="form-control" id="dividendYield" placeholder="e.g., 5.60" required>
+                        <input type="number" step="0.01" class="form-control" id="dividendYield" placeholder="5.60" required>
                     </div>
                 </div>
 
-                <button type="submit" class="btn-primary">📊 Calculate PEGY</button>
+                <button type="submit" class="btn-primary" id="submitBtn">📊 Calculate PEGY</button>
             </form>
         </div>
 
         <div class="card">
-            <h4>📊 PEGY Rankings (Lowest = Best Value)</h4>
-            <div style="overflow-x: auto;">
+            <h4 style="margin-bottom: 15px;">📊 PEGY Rankings</h4>
+            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                 <table id="resultTable">
                     <thead>
                         <tr>
                             <th>Symbol</th>
                             <th>EPS</th>
-                            <th>Old EPS</th>
-                            <th>Growth</th>
-                            <th>Div Yield</th>
+                            <th>Old</th>
+                            <th>Grow</th>
+                            <th>Div</th>
                             <th>P/E</th>
                             <th>PEG</th>
                             <th>PEGY</th>
                             <th>Status</th>
-                            <th>Action</th>
+                            <th>Del</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
@@ -169,12 +170,8 @@ async def home(request: Request):
         window.addEventListener('beforeinstallprompt', function(e) {
             e.preventDefault();
             deferredPrompt = e;
-            document.getElementById('installBtn').style.display = 'inline-block';
-        });
-
-        window.addEventListener('appinstalled', function() {
-            document.getElementById('installBtn').style.display = 'none';
-            deferredPrompt = null;
+            var btn = document.getElementById('installBtn');
+            if (btn) btn.style.display = 'block';
         });
 
         function installApp() {
@@ -187,12 +184,13 @@ async def home(request: Request):
                     deferredPrompt = null;
                 });
             } else {
-                alert('📲 Open in Chrome/Edge browser and try again.');
+                alert('Open in Chrome/Edge to install');
             }
         }
 
-        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
-            document.getElementById('installBtn').style.display = 'none';
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            var btn = document.getElementById('installBtn');
+            if (btn) btn.style.display = 'none';
         }
 
         // ===== Service Worker =====
@@ -208,36 +206,39 @@ async def home(request: Request):
                     var tbody = document.getElementById('tableBody');
                     
                     if (!records || records.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: #94a3b8; padding: 30px;">No records yet. Add your first stock!</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: #94a3b8; padding: 30px;">No records yet</td></tr>';
                         return;
                     }
                     
-                    tbody.innerHTML = records.map(function(r) {
-                        var growthColor = (r.eps_growth != null && r.eps_growth >= 0) ? '#27ae60' : '#e74c3c';
-                        return '<tr>' +
+                    var html = '';
+                    for (var i = 0; i < records.length; i++) {
+                        var r = records[i];
+                        var gc = (r.eps_growth != null && r.eps_growth >= 0) ? '#27ae60' : '#e74c3c';
+                        html += '<tr>' +
                             '<td><strong style="color:#60a5fa;">' + (r.symbol || '-') + '</strong></td>' +
-                            '<td>' + (r.eps != null ? parseFloat(r.eps).toFixed(2) : '-') + '</td>' +
-                            '<td>' + (r.eps_old != null ? parseFloat(r.eps_old).toFixed(2) : '-') + '</td>' +
-                            '<td style="color:' + growthColor + ';font-weight:bold;">' + (r.eps_growth != null ? parseFloat(r.eps_growth).toFixed(2) + '%' : 'N/A') + '</td>' +
-                            '<td>' + (r.dividend_yield != null ? parseFloat(r.dividend_yield).toFixed(2) + '%' : '-') + '</td>' +
-                            '<td>' + (r.pe_ratio != null ? parseFloat(r.pe_ratio).toFixed(2) : '-') + '</td>' +
-                            '<td>' + (r.peg_ratio != null ? parseFloat(r.peg_ratio).toFixed(2) : 'N/A') + '</td>' +
-                            '<td><strong style="color: ' + (r.color || '#fff') + '; font-size: 16px;">' + (r.pegy_ratio != null ? parseFloat(r.pegy_ratio).toFixed(2) : 'N/A') + '</strong></td>' +
-                            '<td><span style="background: ' + (r.color || '#95a5a6') + '; color: white; padding: 5px 14px; border-radius: 15px; font-size: 12px; font-weight: bold;">' + (r.status ? r.status.split(' - ')[0] : '-') + '</span></td>' +
-                            '<td><button onclick="deleteRecord(\'' + r._id + '\')" class="btn-danger">🗑</button></td>' +
+                            '<td>' + (r.eps != null ? Number(r.eps).toFixed(2) : '-') + '</td>' +
+                            '<td>' + (r.eps_old != null ? Number(r.eps_old).toFixed(2) : '-') + '</td>' +
+                            '<td style="color:' + gc + ';font-weight:bold;">' + (r.eps_growth != null ? Number(r.eps_growth).toFixed(2) + '%' : '-') + '</td>' +
+                            '<td>' + (r.dividend_yield != null ? Number(r.dividend_yield).toFixed(2) + '%' : '-') + '</td>' +
+                            '<td>' + (r.pe_ratio != null ? Number(r.pe_ratio).toFixed(2) : '-') + '</td>' +
+                            '<td>' + (r.peg_ratio != null ? Number(r.peg_ratio).toFixed(2) : '-') + '</td>' +
+                            '<td><strong style="color:' + (r.color || '#fff') + ';">' + (r.pegy_ratio != null ? Number(r.pegy_ratio).toFixed(2) : '-') + '</strong></td>' +
+                            '<td><span style="background:' + (r.color || '#95a5a6') + ';color:white;padding:4px 8px;border-radius:10px;font-size:11px;font-weight:bold;">' + (r.status ? r.status.split(' - ')[0] : '-') + '</span></td>' +
+                            '<td><button onclick="deleteRecord(\'' + r._id + '\')" class="btn-danger" style="padding:6px 10px;font-size:14px;">🗑</button></td>' +
                         '</tr>';
-                    }).join('');
+                    }
+                    tbody.innerHTML = html;
                 })
                 .catch(function(error) {
                     console.error('Load error:', error);
-                    document.getElementById('tableBody').innerHTML = '<tr><td colspan="10" style="text-align: center; color: #e74c3c; padding: 30px;">Error loading records</td></tr>';
                 });
         }
 
-        // ===== Form Submit =====
-        document.getElementById('pegyForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            var btn = this.querySelector('button[type="submit"]');
+        // ===== Form Submit Handler =====
+        function handleSubmit(e) {
+            if (e) e.preventDefault();
+            
+            var btn = document.getElementById('submitBtn');
             btn.disabled = true;
             btn.innerHTML = '⏳ Calculating...';
             
@@ -264,7 +265,6 @@ async def home(request: Request):
                 return res.json().then(function(err) { throw new Error(err.detail || 'Failed'); });
             })
             .then(function(result) {
-                console.log('Saved:', result);
                 document.getElementById('pegyForm').reset();
                 document.getElementById('epsPeriod').value = 'annual';
                 document.getElementById('epsGrowth').value = '';
@@ -278,7 +278,9 @@ async def home(request: Request):
                 btn.disabled = false;
                 btn.innerHTML = '📊 Calculate PEGY';
             });
-        });
+            
+            return false;
+        }
 
         // ===== Delete Record =====
         function deleteRecord(id) {
@@ -286,10 +288,6 @@ async def home(request: Request):
             fetch('/api/records/' + id, { method: 'DELETE' })
                 .then(function(res) {
                     if (res.ok) loadRecords();
-                    else alert('Delete failed');
-                })
-                .catch(function(error) {
-                    alert('Error: ' + error.message);
                 });
         }
 
@@ -410,7 +408,7 @@ async def manifest():
 @app.get("/static/sw.js")
 async def service_worker():
     sw_js = """
-const CACHE_NAME = 'pegy-calc-v6';
+const CACHE_NAME = 'pegy-calc-v7';
 const ASSETS = ['/', '/static/manifest.json', '/static/icon-192.png', '/static/icon-512.png'];
 
 self.addEventListener('install', (event) => {
