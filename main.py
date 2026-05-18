@@ -29,7 +29,7 @@ async def home(request: Request):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PEGY Ratio Calculator</title>
     <link rel="manifest" href="/manifest.json">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    <link rel="icon" href="/static/icon-192.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background: #0f172a; color: white; padding: 20px; font-family: Arial; }
