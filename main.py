@@ -8,7 +8,7 @@ import os
 from database import db, pegy_collection, init_db
 from models import PEGYInput
 
-app = FastAPI(title="PEGY + Payout Calculator")
+app = FastAPI(title="PEGY + Multi-Valuation Calculator")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -35,11 +35,20 @@ async def home(request: Request):
             pe_val = f"{r['pe_ratio']:.2f}" if r.get('pe_ratio') is not None else '-'
             peg_val = f"{r['peg_ratio']:.2f}" if r.get('peg_ratio') is not None else '-'
             pegy_val = f"{r['pegy_ratio']:.2f}" if r.get('pegy_ratio') is not None else '-'
+            pb_val = f"{r.get('pb_ratio', 0):.2f}" if r.get('pb_ratio') is not None else '-'
+            fv_pe = f"{r.get('fv_pe', 0):.2f}" if r.get('fv_pe') is not None else '-'
+            fv_pegy = f"{r.get('fv_pegy', 0):.2f}" if r.get('fv_pegy') is not None else '-'
+            fv_graham = f"{r.get('fv_graham', 0):.2f}" if r.get('fv_graham') is not None else '-'
+            fv_lynch = f"{r.get('fv_lynch', 0):.2f}" if r.get('fv_lynch') is not None else '-'
+            fv_book = f"{r.get('fv_book', 0):.2f}" if r.get('fv_book') is not None else '-'
+            fv_avg = f"{r.get('fv_average', 0):.2f}" if r.get('fv_average') is not None else '-'
+            upside_val = f"{r.get('upside', 0):.2f}%" if r.get('upside') is not None else '-'
             color = r.get('color', '#fff')
+            rec = r.get('recommendation', '-')
+            rec_color = "#27ae60" if rec == "BUY" else ("#e74c3c" if rec == "SELL" else "#f39c12")
             status = (r.get('status') or '-').split(' - ')[0]
             gc = "#27ae60" if (r.get('eps_growth') is not None and r.get('eps_growth', 0) >= 0) else "#e74c3c"
             
-            # Payout color
             po = r.get('payout_ratio')
             if po is not None:
                 if 30 <= po <= 60: pc = "#27ae60"
@@ -57,21 +66,30 @@ async def home(request: Request):
                 <td>{pe_val}</td>
                 <td>{peg_val}</td>
                 <td><b style="color:{color};">{pegy_val}</b></td>
-                <td><span style="background:{color};color:white;padding:3px 8px;border-radius:10px;font-size:11px;">{status}</span></td>
+                <td><span style="background:{color};color:white;padding:3px 8px;border-radius:10px;font-size:9px;">{status}</span></td>
+                <td>{pb_val}</td>
+                <td>{fv_pe}</td>
+                <td>{fv_pegy}</td>
+                <td>{fv_graham}</td>
+                <td>{fv_lynch}</td>
+                <td>{fv_book}</td>
+                <td><b style="color:#f59e0b;">{fv_avg}</b></td>
+                <td style="color:{rec_color};font-weight:bold;">{upside_val}</td>
+                <td><span style="background:{rec_color};color:white;padding:3px 8px;border-radius:10px;font-size:9px;">{rec}</span></td>
                 <td>
-                    <a href="/edit/{r['_id']}" style="color:#3b82f6;text-decoration:none;margin-right:6px;">✏️</a>
+                    <a href="/edit/{r['_id']}" style="color:#3b82f6;text-decoration:none;margin-right:3px;">✏️</a>
                     <a href="/delete/{r['_id']}" style="color:#e74c3c;text-decoration:none;" onclick="return confirm('Delete?')">🗑</a>
                 </td>
             </tr>"""
     else:
-        table_rows = '<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:30px;">No records yet</td></tr>'
+        table_rows = '<tr><td colspan="20" style="text-align:center;color:#94a3b8;padding:30px;">No records yet</td></tr>'
     
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PEGY + Payout Calculator</title>
+    <title>PEGY + Multi-Valuation Calculator</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" href="/static/icon-192.png">
     <link rel="apple-touch-icon" href="/static/icon-192.png">
@@ -88,18 +106,19 @@ async def home(request: Request):
         label {{ font-weight:600; margin-top:12px; display:block; color:#e2e8f0; font-size:14px; }}
         .btn {{ background:#3b82f6; border:none; padding:16px; font-weight:bold; border-radius:10px; width:100%; color:white; font-size:18px; margin-top:20px; cursor:pointer; }}
         .btn:active {{ background:#2563eb; }}
-        table {{ width:100%; border-collapse:collapse; margin-top:10px; font-size:10px; }}
-        th {{ background:#334155; padding:6px 3px; text-align:left; font-size:9px; color:#e2e8f0; }}
-        td {{ padding:6px 3px; border-bottom:1px solid #334155; font-size:10px; }}
+        table {{ width:100%; border-collapse:collapse; margin-top:10px; font-size:7px; }}
+        th {{ background:#334155; padding:4px 1px; text-align:left; font-size:7px; color:#e2e8f0; }}
+        td {{ padding:4px 1px; border-bottom:1px solid #334155; font-size:7px; }}
         h1 {{ text-align:center; margin-bottom:15px; font-size:22px; }}
         h4 {{ margin-bottom:10px; font-size:15px; }}
         .install-btn {{ background:#10b981; color:white; padding:14px; border-radius:30px; border:none; cursor:pointer; display:none; margin-bottom:10px; font-size:16px; font-weight:bold; width:100%; }}
         .info-text {{ color:#94a3b8; font-size:11px; margin-top:2px; display:block; }}
+        hr {{ border-color:#334155; margin:15px 0; }}
     </style>
 </head>
 <body>
-    <div style="max-width:650px;margin:0 auto;">
-        <h1>📊 PEGY + Payout Calculator</h1>
+    <div style="max-width:800px;margin:0 auto;">
+        <h1>📊 PEGY + Multi-Valuation</h1>
         <button id="installBtn" class="install-btn" onclick="installApp()">📲 Install App</button>
 
         <div class="card">
@@ -115,7 +134,7 @@ async def home(request: Request):
                 </select>
                 
                 <label>💹 Current Price *</label>
-                <input type="number" step="0.01" name="current_price" placeholder="25.00" required>
+                <input type="number" step="0.01" name="current_price" id="currentPrice" placeholder="25.00" required oninput="calcAll()">
                 
                 <label>📊 Current EPS *</label>
                 <input type="number" step="0.01" name="eps" id="eps" placeholder="4.88" required oninput="calcAll()">
@@ -151,7 +170,62 @@ async def home(request: Request):
                 <input type="hidden" name="payout_cagr" id="payoutCAGRHidden">
                 
                 <label>💵 Dividend Yield (%) *</label>
-                <input type="number" step="0.01" name="dividend_yield" placeholder="5.60" required>
+                <input type="number" step="0.01" name="dividend_yield" id="dividendYield" placeholder="5.60" required oninput="calcAll()">
+                
+                <hr>
+                <h4>📊 Valuation Inputs</h4>
+                
+                <label>📖 NAV Per Share (টাকা)</label>
+                <input type="number" step="0.01" name="nav_ps" id="navPs" placeholder="41.67" oninput="calcAll()">
+                
+                <label>📊 Total Shares (কোটি)</label>
+                <input type="number" step="0.01" name="total_shares" id="totalShares" placeholder="1200" oninput="calcAll()">
+                
+                <label>📈 Industry P/E</label>
+                <input type="number" step="0.01" name="industry_pe" id="industryPE" placeholder="12" oninput="calcAll()">
+                
+                <label>🏦 Bond Yield (%)</label>
+                <input type="number" step="0.01" name="bond_yield" id="bondYield" placeholder="12" value="12" oninput="calcAll()">
+                <span class="info-text">Default: Bangladesh Govt Bond Yield 12%</span>
+                
+                <hr>
+                <h4>📊 Fair Value Outputs</h4>
+                
+                <label>1️⃣ P/E Fair Value</label>
+                <input type="text" id="fvPEDisplay" placeholder="Auto" readonly>
+                <input type="hidden" name="fv_pe" id="fvPEHidden">
+                
+                <label>2️⃣ PEGY Fair Value</label>
+                <input type="text" id="fvPEGYDisplay" placeholder="Auto" readonly>
+                <input type="hidden" name="fv_pegy" id="fvPEGYHidden">
+                
+                <label>3️⃣ Graham Fair Value</label>
+                <input type="text" id="fvGrahamDisplay" placeholder="Auto" readonly>
+                <input type="hidden" name="fv_graham" id="fvGrahamHidden">
+                
+                <label>4️⃣ Peter Lynch Fair Value</label>
+                <input type="text" id="fvLynchDisplay" placeholder="Auto" readonly>
+                <input type="hidden" name="fv_lynch" id="fvLynchHidden">
+                
+                <label>5️⃣ Book Value (NAV)</label>
+                <input type="text" id="fvBookDisplay" placeholder="Auto" readonly>
+                <input type="hidden" name="fv_book" id="fvBookHidden">
+                
+                <label>⭐ Average Fair Value</label>
+                <input type="text" id="fvAvgDisplay" placeholder="Auto" readonly style="background:#1a2744;font-weight:bold;font-size:18px;color:#f59e0b;">
+                <input type="hidden" name="fv_average" id="fvAvgHidden">
+                
+                <label>📊 P/B Ratio</label>
+                <input type="text" id="pbRatioDisplay" placeholder="Auto" readonly>
+                <input type="hidden" name="pb_ratio" id="pbRatioHidden">
+                
+                <label>📈 Upside/Downside (%)</label>
+                <input type="text" id="upsideDisplay" placeholder="Auto" readonly>
+                <input type="hidden" name="upside" id="upsideHidden">
+                
+                <label>🎯 Recommendation</label>
+                <input type="text" id="recommendationDisplay" placeholder="Auto" readonly style="font-size:20px;font-weight:bold;">
+                <input type="hidden" name="recommendation" id="recommendationHidden">
                 
                 <button type="submit" class="btn">📊 Calculate All</button>
             </form>
@@ -162,7 +236,7 @@ async def home(request: Request):
             <div style="overflow-x:auto;">
                 <table>
                     <thead>
-                        <tr><th>Sym</th><th>EPS</th><th>DPS</th><th>Pay%</th><th>Grw</th><th>Div%</th><th>P/E</th><th>PEG</th><th>PEGY</th><th>St</th><th>Act</th></tr>
+                        <tr><th>Sym</th><th>EPS</th><th>DPS</th><th>Pay%</th><th>Grw</th><th>Div%</th><th>P/E</th><th>PEG</th><th>PEGY</th><th>St</th><th>P/B</th><th>FvPE</th><th>FvPGY</th><th>FvGr</th><th>FvLy</th><th>FvBk</th><th>⭐Avg</th><th>Up%</th><th>Rec</th><th>Act</th></tr>
                     </thead>
                     <tbody>{table_rows}</tbody>
                 </table>
@@ -196,6 +270,7 @@ async def home(request: Request):
             }}
             
             calcPayout();
+            calcAll();
         }}
         
         function calcGrowth() {{
@@ -209,7 +284,6 @@ async def home(request: Request):
                 d.style.color = g >= 0 ? '#27ae60' : '#e74c3c';
                 h.value = g.toFixed(2);
             }} else {{ d.value = ''; h.value = ''; d.style.color = '#e2e8f0'; }}
-            calcPayout();
         }}
         
         function calcPayout() {{
@@ -248,6 +322,110 @@ async def home(request: Request):
         function calcAll() {{
             calcGrowth();
             calcPayout();
+            
+            var price = parseFloat(document.getElementById('currentPrice').value) || 0;
+            var eps = parseFloat(document.getElementById('eps').value) || 0;
+            var growth = parseFloat(document.getElementById('epsGrowthHidden').value) || 0;
+            var divYield = parseFloat(document.getElementById('dividendYield').value) || 0;
+            var navPs = parseFloat(document.getElementById('navPs').value) || 0;
+            var industryPE = parseFloat(document.getElementById('industryPE').value) || 0;
+            var bondYield = parseFloat(document.getElementById('bondYield').value) || 12;
+            
+            var fvPE = 0, fvPEGY = 0, fvGraham = 0, fvLynch = 0, fvBook = 0;
+            var count = 0, total = 0;
+            
+            // 1. P/E Fair Value
+            if (eps > 0 && industryPE > 0) {{
+                fvPE = eps * industryPE;
+                document.getElementById('fvPEDisplay').value = fvPE.toFixed(2);
+                document.getElementById('fvPEHidden').value = fvPE.toFixed(2);
+                count++; total += fvPE;
+            }} else {{
+                document.getElementById('fvPEDisplay').value = '';
+                document.getElementById('fvPEHidden').value = '';
+            }}
+            
+            // 2. PEGY Fair Value
+            if (eps > 0 && growth > 0 && divYield > 0) {{
+                fvPEGY = eps * (growth + divYield);
+                document.getElementById('fvPEGYDisplay').value = fvPEGY.toFixed(2);
+                document.getElementById('fvPEGYHidden').value = fvPEGY.toFixed(2);
+                count++; total += fvPEGY;
+            }} else {{
+                document.getElementById('fvPEGYDisplay').value = '';
+                document.getElementById('fvPEGYHidden').value = '';
+            }}
+            
+            // 3. Graham Fair Value
+            if (eps > 0 && growth > 0 && bondYield > 0) {{
+                fvGraham = eps * (8.5 + 2 * growth) * 4.4 / bondYield;
+                document.getElementById('fvGrahamDisplay').value = fvGraham.toFixed(2);
+                document.getElementById('fvGrahamHidden').value = fvGraham.toFixed(2);
+                count++; total += fvGraham;
+            }} else {{
+                document.getElementById('fvGrahamDisplay').value = '';
+                document.getElementById('fvGrahamHidden').value = '';
+            }}
+            
+            // 4. Peter Lynch Fair Value
+            if (eps > 0 && growth > 0) {{
+                fvLynch = eps * growth;
+                document.getElementById('fvLynchDisplay').value = fvLynch.toFixed(2);
+                document.getElementById('fvLynchHidden').value = fvLynch.toFixed(2);
+                count++; total += fvLynch;
+            }} else {{
+                document.getElementById('fvLynchDisplay').value = '';
+                document.getElementById('fvLynchHidden').value = '';
+            }}
+            
+            // 5. Book Value (NAV)
+            if (navPs > 0) {{
+                fvBook = navPs;
+                document.getElementById('fvBookDisplay').value = fvBook.toFixed(2);
+                document.getElementById('fvBookHidden').value = fvBook.toFixed(2);
+                count++; total += fvBook;
+            }} else {{
+                document.getElementById('fvBookDisplay').value = '';
+                document.getElementById('fvBookHidden').value = '';
+            }}
+            
+            // Average Fair Value
+            var fvAvg = count > 0 ? total / count : 0;
+            document.getElementById('fvAvgDisplay').value = fvAvg > 0 ? fvAvg.toFixed(2) : '';
+            document.getElementById('fvAvgHidden').value = fvAvg > 0 ? fvAvg.toFixed(2) : '';
+            
+            // P/B Ratio
+            if (price > 0 && navPs > 0) {{
+                var pb = price / navPs;
+                document.getElementById('pbRatioDisplay').value = pb.toFixed(2);
+                document.getElementById('pbRatioHidden').value = pb.toFixed(2);
+            }} else {{
+                document.getElementById('pbRatioDisplay').value = '';
+                document.getElementById('pbRatioHidden').value = '';
+            }}
+            
+            // Upside/Downside (based on Average Fair Value)
+            if (price > 0 && fvAvg > 0) {{
+                var upside = ((fvAvg - price) / price) * 100;
+                document.getElementById('upsideDisplay').value = upside.toFixed(2) + '%';
+                document.getElementById('upsideHidden').value = upside.toFixed(2);
+                document.getElementById('upsideDisplay').style.color = upside > 0 ? '#27ae60' : '#e74c3c';
+                
+                var rec;
+                if (upside > 20) rec = 'BUY';
+                else if (upside > 0) rec = 'HOLD';
+                else if (upside > -10) rec = 'HOLD';
+                else rec = 'SELL';
+                document.getElementById('recommendationDisplay').value = rec;
+                document.getElementById('recommendationHidden').value = rec;
+                var rc = rec == 'BUY' ? '#27ae60' : (rec == 'SELL' ? '#e74c3c' : '#f39c12');
+                document.getElementById('recommendationDisplay').style.color = rc;
+            }} else {{
+                document.getElementById('upsideDisplay').value = '';
+                document.getElementById('upsideHidden').value = '';
+                document.getElementById('recommendationDisplay').value = '';
+                document.getElementById('recommendationHidden').value = '';
+            }}
         }}
 
         var dp;
@@ -274,6 +452,19 @@ async def submit_form(
     payout_cagr: float = Form(None),
     dividend_yield: float = Form(...),
     current_price: float = Form(...),
+    nav_ps: float = Form(None),
+    total_shares: float = Form(None),
+    industry_pe: float = Form(None),
+    bond_yield: float = Form(None),
+    fv_pe: float = Form(None),
+    fv_pegy: float = Form(None),
+    fv_graham: float = Form(None),
+    fv_lynch: float = Form(None),
+    fv_book: float = Form(None),
+    fv_average: float = Form(None),
+    pb_ratio: float = Form(None),
+    upside: float = Form(None),
+    recommendation: str = Form(None),
 ):
     try:
         pe_ratio = round(current_price / eps, 2)
@@ -294,7 +485,6 @@ async def submit_form(
             else: status, color = "Poor", "#e74c3c"
         else: status, color = "N/A", "#95a5a6"
         
-        # Auto calculate payout ratio if not provided
         if payout_ratio is None and dps > 0 and eps > 0:
             payout_ratio = round((dps / eps) * 100, 2)
         
@@ -305,6 +495,12 @@ async def submit_form(
             "dividend_yield": dividend_yield, "eps_growth": eps_growth,
             "current_price": current_price, "pe_ratio": pe_ratio,
             "peg_ratio": peg_ratio, "pegy_ratio": pegy_ratio,
+            "nav_ps": nav_ps, "total_shares": total_shares,
+            "industry_pe": industry_pe, "bond_yield": bond_yield,
+            "fv_pe": fv_pe, "fv_pegy": fv_pegy, "fv_graham": fv_graham,
+            "fv_lynch": fv_lynch, "fv_book": fv_book, "fv_average": fv_average,
+            "pb_ratio": pb_ratio, "upside": upside,
+            "recommendation": recommendation,
             "status": status, "color": color, "created_at": datetime.utcnow(),
         })
     except Exception as e:
@@ -334,6 +530,7 @@ async def edit_page(request: Request, record_id: str):
         label {{ font-weight:600; margin-top:14px; display:block; color:#e2e8f0; font-size:14px; }}
         .btn {{ background:#3b82f6; border:none; padding:16px; font-weight:bold; border-radius:10px; width:100%; color:white; font-size:18px; margin-top:20px; cursor:pointer; }}
         .btn-cancel {{ background:#64748b; border:none; padding:12px; border-radius:10px; width:100%; color:white; margin-top:8px; cursor:pointer; display:block; text-align:center; text-decoration:none; }}
+        hr {{ border-color:#334155; margin:15px 0; }}
     </style>
 </head>
 <body>
@@ -354,10 +551,40 @@ async def edit_page(request: Request, record_id: str):
             <input type="number" step="0.01" name="dps_old" value="{record.get('dps_old',0)}">
             <label>Payout Ratio (%)</label>
             <input type="number" step="0.01" name="payout_ratio" value="{record.get('payout_ratio',0)}">
+            <label>Payout CAGR (%)</label>
+            <input type="number" step="0.01" name="payout_cagr" value="{record.get('payout_cagr',0)}">
             <label>Dividend Yield (%)</label>
             <input type="number" step="0.01" name="dividend_yield" value="{record.get('dividend_yield',0)}">
             <label>Current Price</label>
             <input type="number" step="0.01" name="current_price" value="{record.get('current_price',0)}">
+            <hr>
+            <h4>Valuation</h4>
+            <label>NAV Per Share</label>
+            <input type="number" step="0.01" name="nav_ps" value="{record.get('nav_ps',0)}">
+            <label>Total Shares (Crore)</label>
+            <input type="number" step="0.01" name="total_shares" value="{record.get('total_shares',0)}">
+            <label>Industry P/E</label>
+            <input type="number" step="0.01" name="industry_pe" value="{record.get('industry_pe',0)}">
+            <label>Bond Yield (%)</label>
+            <input type="number" step="0.01" name="bond_yield" value="{record.get('bond_yield',12)}">
+            <label>FV P/E</label>
+            <input type="number" step="0.01" name="fv_pe" value="{record.get('fv_pe',0)}">
+            <label>FV PEGY</label>
+            <input type="number" step="0.01" name="fv_pegy" value="{record.get('fv_pegy',0)}">
+            <label>FV Graham</label>
+            <input type="number" step="0.01" name="fv_graham" value="{record.get('fv_graham',0)}">
+            <label>FV Lynch</label>
+            <input type="number" step="0.01" name="fv_lynch" value="{record.get('fv_lynch',0)}">
+            <label>FV Book</label>
+            <input type="number" step="0.01" name="fv_book" value="{record.get('fv_book',0)}">
+            <label>FV Average</label>
+            <input type="number" step="0.01" name="fv_average" value="{record.get('fv_average',0)}">
+            <label>P/B Ratio</label>
+            <input type="number" step="0.01" name="pb_ratio" value="{record.get('pb_ratio',0)}">
+            <label>Upside (%)</label>
+            <input type="number" step="0.01" name="upside" value="{record.get('upside',0)}">
+            <label>Recommendation</label>
+            <input type="text" name="recommendation" value="{record.get('recommendation','')}">
             <button type="submit" class="btn">💾 Update</button>
         </form>
         <a href="/" class="btn-cancel">Cancel</a>
@@ -377,8 +604,22 @@ async def update_record(
     dps: float = Form(0),
     dps_old: float = Form(None),
     payout_ratio: float = Form(None),
+    payout_cagr: float = Form(None),
     dividend_yield: float = Form(...),
     current_price: float = Form(...),
+    nav_ps: float = Form(None),
+    total_shares: float = Form(None),
+    industry_pe: float = Form(None),
+    bond_yield: float = Form(None),
+    fv_pe: float = Form(None),
+    fv_pegy: float = Form(None),
+    fv_graham: float = Form(None),
+    fv_lynch: float = Form(None),
+    fv_book: float = Form(None),
+    fv_average: float = Form(None),
+    pb_ratio: float = Form(None),
+    upside: float = Form(None),
+    recommendation: str = Form(None),
 ):
     try:
         obj_id = ObjectId(record_id)
@@ -401,9 +642,15 @@ async def update_record(
             {"$set": {
                 "symbol": symbol.upper(), "eps": eps, "eps_old": eps_old,
                 "dps": dps, "dps_old": dps_old, "payout_ratio": payout_ratio,
-                "eps_growth": eps_growth, "dividend_yield": dividend_yield,
-                "current_price": current_price, "pe_ratio": pe_ratio,
-                "peg_ratio": peg_ratio, "pegy_ratio": pegy_ratio,
+                "payout_cagr": payout_cagr, "eps_growth": eps_growth,
+                "dividend_yield": dividend_yield, "current_price": current_price,
+                "pe_ratio": pe_ratio, "peg_ratio": peg_ratio, "pegy_ratio": pegy_ratio,
+                "nav_ps": nav_ps, "total_shares": total_shares,
+                "industry_pe": industry_pe, "bond_yield": bond_yield,
+                "fv_pe": fv_pe, "fv_pegy": fv_pegy, "fv_graham": fv_graham,
+                "fv_lynch": fv_lynch, "fv_book": fv_book, "fv_average": fv_average,
+                "pb_ratio": pb_ratio, "upside": upside,
+                "recommendation": recommendation,
                 "status": status, "color": color,
             }}
         )
@@ -446,6 +693,8 @@ async def calculate_pegy(data: PEGYInput):
             "symbol": data.symbol.upper(), "eps": data.eps, "eps_old": data.eps_old,
             "eps_period": data.eps_period, "dividend_yield": data.dividend_yield,
             "eps_growth": data.eps_growth, "current_price": data.current_price,
+            "dps": data.dps, "dps_old": data.dps_old,
+            "payout_ratio": data.payout_ratio, "payout_cagr": data.payout_cagr,
             "pe_ratio": pe_ratio, "peg_ratio": peg_ratio, "pegy_ratio": pegy_ratio,
             "status": status, "color": color, "created_at": datetime.utcnow(),
         })
@@ -465,7 +714,7 @@ async def manifest(): return FileResponse("static/manifest.json")
 
 @app.get("/static/sw.js")
 async def service_worker():
-    return HTMLResponse(content="""const CACHE_NAME='pegy-v11';self.addEventListener('install',(e)=>{e.waitUntil(caches.open(CACHE_NAME).then((c)=>c.addAll(['/','/static/manifest.json'])));self.skipWaiting();});self.addEventListener('activate',(e)=>{e.waitUntil(clients.claim());});self.addEventListener('fetch',(e)=>{e.respondWith(caches.match(e.request).then((r)=>r||fetch(e.request)));});""", media_type="application/javascript")
+    return HTMLResponse(content="""const CACHE_NAME='pegy-v14';self.addEventListener('install',(e)=>{e.waitUntil(caches.open(CACHE_NAME).then((c)=>c.addAll(['/','/static/manifest.json'])));self.skipWaiting();});self.addEventListener('activate',(e)=>{e.waitUntil(clients.claim());});self.addEventListener('fetch',(e)=>{e.respondWith(caches.match(e.request).then((r)=>r||fetch(e.request)));});""", media_type="application/javascript")
 
 # ===================== RUN =====================
 if __name__ == "__main__":
