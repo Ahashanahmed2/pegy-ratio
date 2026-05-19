@@ -8,7 +8,7 @@ import os
 from database import db, pegy_collection, init_db
 from models import PEGYInput
 
-app = FastAPI(title="PEGY + Multi-Valuation Calculator")
+app = FastAPI(title="PEGY + Multi-Valuation + Scoring Calculator")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -16,12 +16,76 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def startup():
     await init_db()
 
+# ===================== SCORING ENGINE =====================
+def calculate_score(r):
+    score = 0
+    
+    # PEGY Score (0-30)
+    pegy = r.get('pegy_ratio')
+    if pegy is not None:
+        if pegy < 0.5: score += 30
+        elif pegy < 1: score += 25
+        elif pegy < 1.5: score += 20
+        elif pegy < 2: score += 15
+        elif pegy < 3: score += 10
+        else: score += 5
+    
+    # Growth Score (0-20)
+    growth = r.get('eps_growth')
+    if growth is not None:
+        if growth > 20: score += 20
+        elif growth > 15: score += 15
+        elif growth > 10: score += 10
+        elif growth > 5: score += 5
+    
+    # Payout Score (0-15)
+    payout = r.get('payout_ratio')
+    if payout is not None:
+        if 30 <= payout <= 60: score += 15
+        elif payout < 80: score += 10
+        else: score += 5
+    
+    # Upside Score (0-20)
+    upside = r.get('upside')
+    if upside is not None:
+        if upside > 50: score += 20
+        elif upside > 20: score += 15
+        elif upside > 0: score += 10
+        elif upside > -10: score += 5
+    
+    # P/B Score (0-15)
+    pb = r.get('pb_ratio')
+    if pb is not None:
+        if pb < 1: score += 15
+        elif pb < 2: score += 10
+        elif pb < 3: score += 5
+    
+    return score
+
+def get_stars(score):
+    if score >= 80: return "⭐⭐⭐⭐⭐", "#f59e0b"
+    elif score >= 60: return "⭐⭐⭐⭐", "#27ae60"
+    elif score >= 40: return "⭐⭐⭐", "#2ecc71"
+    elif score >= 20: return "⭐⭐", "#f39c12"
+    else: return "⭐", "#e74c3c"
+
+def get_rating(score):
+    if score >= 80: return "Strong BUY", "#f59e0b"
+    elif score >= 60: return "BUY", "#27ae60"
+    elif score >= 40: return "HOLD", "#2ecc71"
+    elif score >= 20: return "Weak HOLD", "#f39c12"
+    else: return "SELL", "#e74c3c"
+
 # ===================== HOME PAGE =====================
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    records = await pegy_collection.find().sort("pegy_ratio", 1).to_list(100)
+    records = await pegy_collection.find().sort("score", -1).to_list(100)
     for r in records:
         r["_id"] = str(r["_id"])
+        if "score" not in r:
+            r["score"] = calculate_score(r)
+            r["stars"], r["stars_color"] = get_stars(r["score"])
+            r["rating"], r["rating_color"] = get_rating(r["score"])
     
     table_rows = ""
     if records:
@@ -43,6 +107,11 @@ async def home(request: Request):
             fv_book = f"{r.get('fv_book', 0):.2f}" if r.get('fv_book') is not None else '-'
             fv_avg = f"{r.get('fv_average', 0):.2f}" if r.get('fv_average') is not None else '-'
             upside_val = f"{r.get('upside', 0):.2f}%" if r.get('upside') is not None else '-'
+            score_val = r.get('score', 0)
+            stars = r.get('stars', '⭐')
+            stars_color = r.get('stars_color', '#f59e0b')
+            rating = r.get('rating', '-')
+            rating_color = r.get('rating_color', '#95a5a6')
             color = r.get('color', '#fff')
             rec = r.get('recommendation', '-')
             rec_color = "#27ae60" if rec == "BUY" else ("#e74c3c" if rec == "SELL" else "#f39c12")
@@ -58,10 +127,12 @@ async def home(request: Request):
             
             table_rows += f"""<tr>
                 <td><b style="color:#60a5fa;">{symbol}</b></td>
+                <td style="color:{stars_color};font-size:10px;">{stars}</td>
+                <td><b style="color:{rating_color};">{rating}</b></td>
+                <td style="color:{gc};">{growth_val}</td>
                 <td>{eps_val}</td>
                 <td>{dps_val}</td>
                 <td style="color:{pc};font-weight:bold;">{payout_val}</td>
-                <td style="color:{gc};">{growth_val}</td>
                 <td>{div_val}</td>
                 <td>{pe_val}</td>
                 <td>{peg_val}</td>
@@ -82,14 +153,14 @@ async def home(request: Request):
                 </td>
             </tr>"""
     else:
-        table_rows = '<tr><td colspan="20" style="text-align:center;color:#94a3b8;padding:30px;">No records yet</td></tr>'
+        table_rows = '<tr><td colspan="22" style="text-align:center;color:#94a3b8;padding:30px;">No records yet</td></tr>'
     
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PEGY + Multi-Valuation Calculator</title>
+    <title>PEGY + Multi-Valuation + Scoring</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" href="/static/icon-192.png">
     <link rel="apple-touch-icon" href="/static/icon-192.png">
@@ -117,8 +188,8 @@ async def home(request: Request):
     </style>
 </head>
 <body>
-    <div style="max-width:800px;margin:0 auto;">
-        <h1>📊 PEGY + Multi-Valuation</h1>
+    <div style="max-width:850px;margin:0 auto;">
+        <h1>📊 PEGY + Scoring</h1>
         <button id="installBtn" class="install-btn" onclick="installApp()">📲 Install App</button>
 
         <div class="card">
@@ -186,7 +257,6 @@ async def home(request: Request):
                 
                 <label>🏦 Bond Yield (%)</label>
                 <input type="number" step="0.01" name="bond_yield" id="bondYield" placeholder="12" value="12" oninput="calcAll()">
-                <span class="info-text">Default: Bangladesh Govt Bond Yield 12%</span>
                 
                 <hr>
                 <h4>📊 Fair Value Outputs</h4>
@@ -232,11 +302,11 @@ async def home(request: Request):
         </div>
 
         <div class="card">
-            <h4>📊 Rankings (Low PEGY = Best)</h4>
+            <h4>📊 Rankings (Highest Score First)</h4>
             <div style="overflow-x:auto;">
                 <table>
                     <thead>
-                        <tr><th>Sym</th><th>EPS</th><th>DPS</th><th>Pay%</th><th>Grw</th><th>Div%</th><th>P/E</th><th>PEG</th><th>PEGY</th><th>St</th><th>P/B</th><th>FvPE</th><th>FvPGY</th><th>FvGr</th><th>FvLy</th><th>FvBk</th><th>⭐Avg</th><th>Up%</th><th>Rec</th><th>Act</th></tr>
+                        <tr><th>Sym</th><th>⭐</th><th>Rating</th><th>Grw</th><th>EPS</th><th>DPS</th><th>Pay%</th><th>Div%</th><th>P/E</th><th>PEG</th><th>PEGY</th><th>St</th><th>P/B</th><th>FvPE</th><th>FvPGY</th><th>FvGr</th><th>FvLy</th><th>FvBk</th><th>⭐Avg</th><th>Up%</th><th>Rec</th><th>Act</th></tr>
                     </thead>
                     <tbody>{table_rows}</tbody>
                 </table>
@@ -334,7 +404,6 @@ async def home(request: Request):
             var fvPE = 0, fvPEGY = 0, fvGraham = 0, fvLynch = 0, fvBook = 0;
             var count = 0, total = 0;
             
-            // 1. P/E Fair Value
             if (eps > 0 && industryPE > 0) {{
                 fvPE = eps * industryPE;
                 document.getElementById('fvPEDisplay').value = fvPE.toFixed(2);
@@ -345,7 +414,6 @@ async def home(request: Request):
                 document.getElementById('fvPEHidden').value = '';
             }}
             
-            // 2. PEGY Fair Value
             if (eps > 0 && growth > 0 && divYield > 0) {{
                 fvPEGY = eps * (growth + divYield);
                 document.getElementById('fvPEGYDisplay').value = fvPEGY.toFixed(2);
@@ -356,7 +424,6 @@ async def home(request: Request):
                 document.getElementById('fvPEGYHidden').value = '';
             }}
             
-            // 3. Graham Fair Value
             if (eps > 0 && growth > 0 && bondYield > 0) {{
                 fvGraham = eps * (8.5 + 2 * growth) * 4.4 / bondYield;
                 document.getElementById('fvGrahamDisplay').value = fvGraham.toFixed(2);
@@ -367,7 +434,6 @@ async def home(request: Request):
                 document.getElementById('fvGrahamHidden').value = '';
             }}
             
-            // 4. Peter Lynch Fair Value
             if (eps > 0 && growth > 0) {{
                 fvLynch = eps * growth;
                 document.getElementById('fvLynchDisplay').value = fvLynch.toFixed(2);
@@ -378,7 +444,6 @@ async def home(request: Request):
                 document.getElementById('fvLynchHidden').value = '';
             }}
             
-            // 5. Book Value (NAV)
             if (navPs > 0) {{
                 fvBook = navPs;
                 document.getElementById('fvBookDisplay').value = fvBook.toFixed(2);
@@ -389,12 +454,10 @@ async def home(request: Request):
                 document.getElementById('fvBookHidden').value = '';
             }}
             
-            // Average Fair Value
             var fvAvg = count > 0 ? total / count : 0;
             document.getElementById('fvAvgDisplay').value = fvAvg > 0 ? fvAvg.toFixed(2) : '';
             document.getElementById('fvAvgHidden').value = fvAvg > 0 ? fvAvg.toFixed(2) : '';
             
-            // P/B Ratio
             if (price > 0 && navPs > 0) {{
                 var pb = price / navPs;
                 document.getElementById('pbRatioDisplay').value = pb.toFixed(2);
@@ -404,7 +467,6 @@ async def home(request: Request):
                 document.getElementById('pbRatioHidden').value = '';
             }}
             
-            // Upside/Downside (based on Average Fair Value)
             if (price > 0 && fvAvg > 0) {{
                 var upside = ((fvAvg - price) / price) * 100;
                 document.getElementById('upsideDisplay').value = upside.toFixed(2) + '%';
@@ -488,7 +550,7 @@ async def submit_form(
         if payout_ratio is None and dps > 0 and eps > 0:
             payout_ratio = round((dps / eps) * 100, 2)
         
-        await pegy_collection.insert_one({
+        doc = {
             "symbol": symbol.upper(), "eps": annual_eps, "eps_old": eps_old,
             "eps_period": eps_period, "dps": dps, "dps_old": dps_old,
             "payout_ratio": payout_ratio, "payout_cagr": payout_cagr,
@@ -502,7 +564,14 @@ async def submit_form(
             "pb_ratio": pb_ratio, "upside": upside,
             "recommendation": recommendation,
             "status": status, "color": color, "created_at": datetime.utcnow(),
-        })
+        }
+        
+        # Calculate Score
+        doc["score"] = calculate_score(doc)
+        doc["stars"], doc["stars_color"] = get_stars(doc["score"])
+        doc["rating"], doc["rating_color"] = get_rating(doc["score"])
+        
+        await pegy_collection.insert_one(doc)
     except Exception as e:
         print(f"Submit Error: {e}")
     
@@ -637,23 +706,27 @@ async def update_record(
             else: status, color = "Poor", "#e74c3c"
         else: status, color = "N/A", "#95a5a6"
         
-        await pegy_collection.update_one(
-            {"_id": obj_id},
-            {"$set": {
-                "symbol": symbol.upper(), "eps": eps, "eps_old": eps_old,
-                "dps": dps, "dps_old": dps_old, "payout_ratio": payout_ratio,
-                "payout_cagr": payout_cagr, "eps_growth": eps_growth,
-                "dividend_yield": dividend_yield, "current_price": current_price,
-                "pe_ratio": pe_ratio, "peg_ratio": peg_ratio, "pegy_ratio": pegy_ratio,
-                "nav_ps": nav_ps, "total_shares": total_shares,
-                "industry_pe": industry_pe, "bond_yield": bond_yield,
-                "fv_pe": fv_pe, "fv_pegy": fv_pegy, "fv_graham": fv_graham,
-                "fv_lynch": fv_lynch, "fv_book": fv_book, "fv_average": fv_average,
-                "pb_ratio": pb_ratio, "upside": upside,
-                "recommendation": recommendation,
-                "status": status, "color": color,
-            }}
-        )
+        update_doc = {
+            "symbol": symbol.upper(), "eps": eps, "eps_old": eps_old,
+            "dps": dps, "dps_old": dps_old, "payout_ratio": payout_ratio,
+            "payout_cagr": payout_cagr, "eps_growth": eps_growth,
+            "dividend_yield": dividend_yield, "current_price": current_price,
+            "pe_ratio": pe_ratio, "peg_ratio": peg_ratio, "pegy_ratio": pegy_ratio,
+            "nav_ps": nav_ps, "total_shares": total_shares,
+            "industry_pe": industry_pe, "bond_yield": bond_yield,
+            "fv_pe": fv_pe, "fv_pegy": fv_pegy, "fv_graham": fv_graham,
+            "fv_lynch": fv_lynch, "fv_book": fv_book, "fv_average": fv_average,
+            "pb_ratio": pb_ratio, "upside": upside,
+            "recommendation": recommendation,
+            "status": status, "color": color,
+        }
+        
+        # Recalculate Score
+        update_doc["score"] = calculate_score(update_doc)
+        update_doc["stars"], update_doc["stars_color"] = get_stars(update_doc["score"])
+        update_doc["rating"], update_doc["rating_color"] = get_rating(update_doc["score"])
+        
+        await pegy_collection.update_one({"_id": obj_id}, {"$set": update_doc})
     except Exception as e:
         print(f"Update error: {e}")
     
@@ -704,7 +777,7 @@ async def calculate_pegy(data: PEGYInput):
 
 @app.get("/api/records")
 async def get_records():
-    records = await pegy_collection.find().sort("pegy_ratio", 1).to_list(100)
+    records = await pegy_collection.find().sort("score", -1).to_list(100)
     for r in records: r["_id"] = str(r["_id"])
     return records
 
@@ -714,7 +787,7 @@ async def manifest(): return FileResponse("static/manifest.json")
 
 @app.get("/static/sw.js")
 async def service_worker():
-    return HTMLResponse(content="""const CACHE_NAME='pegy-v14';self.addEventListener('install',(e)=>{e.waitUntil(caches.open(CACHE_NAME).then((c)=>c.addAll(['/','/static/manifest.json'])));self.skipWaiting();});self.addEventListener('activate',(e)=>{e.waitUntil(clients.claim());});self.addEventListener('fetch',(e)=>{e.respondWith(caches.match(e.request).then((r)=>r||fetch(e.request)));});""", media_type="application/javascript")
+    return HTMLResponse(content="""const CACHE_NAME='pegy-v15';self.addEventListener('install',(e)=>{e.waitUntil(caches.open(CACHE_NAME).then((c)=>c.addAll(['/','/static/manifest.json'])));self.skipWaiting();});self.addEventListener('activate',(e)=>{e.waitUntil(clients.claim());});self.addEventListener('fetch',(e)=>{e.respondWith(caches.match(e.request).then((r)=>r||fetch(e.request)));});""", media_type="application/javascript")
 
 # ===================== RUN =====================
 if __name__ == "__main__":
