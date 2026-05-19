@@ -19,8 +19,6 @@ async def startup():
 # ===================== SCORING ENGINE =====================
 def calculate_score(r):
     score = 0
-    
-    # PEGY Score (0-30)
     pegy = r.get('pegy_ratio')
     if pegy is not None:
         if pegy < 0.5: score += 30
@@ -29,37 +27,28 @@ def calculate_score(r):
         elif pegy < 2: score += 15
         elif pegy < 3: score += 10
         else: score += 5
-    
-    # Growth Score (0-20)
     growth = r.get('eps_growth')
     if growth is not None:
         if growth > 20: score += 20
         elif growth > 15: score += 15
         elif growth > 10: score += 10
         elif growth > 5: score += 5
-    
-    # Payout Score (0-15)
     payout = r.get('payout_ratio')
     if payout is not None:
         if 30 <= payout <= 60: score += 15
         elif payout < 80: score += 10
         else: score += 5
-    
-    # Upside Score (0-20)
     upside = r.get('upside')
     if upside is not None:
         if upside > 50: score += 20
         elif upside > 20: score += 15
         elif upside > 0: score += 10
         elif upside > -10: score += 5
-    
-    # P/B Score (0-15)
     pb = r.get('pb_ratio')
     if pb is not None:
         if pb < 1: score += 15
         elif pb < 2: score += 10
         elif pb < 3: score += 5
-    
     return score
 
 def get_stars(score):
@@ -100,6 +89,7 @@ async def home(request: Request):
             peg_val = f"{r['peg_ratio']:.2f}" if r.get('peg_ratio') is not None else '-'
             pegy_val = f"{r['pegy_ratio']:.2f}" if r.get('pegy_ratio') is not None else '-'
             pb_val = f"{r.get('pb_ratio', 0):.2f}" if r.get('pb_ratio') is not None else '-'
+            mcap_val = f"৳{r.get('market_cap', 0):.0f}Cr" if r.get('market_cap') is not None else '-'
             fv_pe = f"{r.get('fv_pe', 0):.2f}" if r.get('fv_pe') is not None else '-'
             fv_pegy = f"{r.get('fv_pegy', 0):.2f}" if r.get('fv_pegy') is not None else '-'
             fv_graham = f"{r.get('fv_graham', 0):.2f}" if r.get('fv_graham') is not None else '-'
@@ -139,6 +129,7 @@ async def home(request: Request):
                 <td><b style="color:{color};">{pegy_val}</b></td>
                 <td><span style="background:{color};color:white;padding:3px 8px;border-radius:10px;font-size:9px;">{status}</span></td>
                 <td>{pb_val}</td>
+                <td>{mcap_val}</td>
                 <td>{fv_pe}</td>
                 <td>{fv_pegy}</td>
                 <td>{fv_graham}</td>
@@ -153,7 +144,7 @@ async def home(request: Request):
                 </td>
             </tr>"""
     else:
-        table_rows = '<tr><td colspan="22" style="text-align:center;color:#94a3b8;padding:30px;">No records yet</td></tr>'
+        table_rows = '<tr><td colspan="23" style="text-align:center;color:#94a3b8;padding:30px;">No records yet</td></tr>'
     
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -185,10 +176,13 @@ async def home(request: Request):
         .install-btn {{ background:#10b981; color:white; padding:14px; border-radius:30px; border:none; cursor:pointer; display:none; margin-bottom:10px; font-size:16px; font-weight:bold; width:100%; }}
         .info-text {{ color:#94a3b8; font-size:11px; margin-top:2px; display:block; }}
         hr {{ border-color:#334155; margin:15px 0; }}
+        .flex-row {{ display:flex; gap:10px; }}
+        .flex-2 {{ flex:2; }}
+        .flex-1 {{ flex:1; }}
     </style>
 </head>
 <body>
-    <div style="max-width:850px;margin:0 auto;">
+    <div style="max-width:900px;margin:0 auto;">
         <h1>📊 PEGY + Scoring</h1>
         <button id="installBtn" class="install-btn" onclick="installApp()">📲 Install App</button>
 
@@ -249,8 +243,17 @@ async def home(request: Request):
                 <label>📖 NAV Per Share (টাকা)</label>
                 <input type="number" step="0.01" name="nav_ps" id="navPs" placeholder="41.67" oninput="calcAll()">
                 
-                <label>📊 Total Shares (কোটি)</label>
-                <input type="number" step="0.01" name="total_shares" id="totalShares" placeholder="1200" oninput="calcAll()">
+                <label>📊 Total Shares</label>
+                <div class="flex-row">
+                    <input type="number" step="0.01" id="totalShares" placeholder="1200" oninput="calcAll()" class="flex-2">
+                    <select id="shareUnit" onchange="calcAll()" class="flex-1">
+                        <option value="crore">কোটি (Cr)</option>
+                        <option value="lakh">লক্ষ (Lac)</option>
+                        <option value="thousand">হাজার (K)</option>
+                        <option value="unit">ইউনিট</option>
+                    </select>
+                </div>
+                <input type="hidden" name="total_shares" id="totalSharesHidden">
                 
                 <label>📈 Industry P/E</label>
                 <input type="number" step="0.01" name="industry_pe" id="industryPE" placeholder="12" oninput="calcAll()">
@@ -289,6 +292,10 @@ async def home(request: Request):
                 <input type="text" id="pbRatioDisplay" placeholder="Auto" readonly>
                 <input type="hidden" name="pb_ratio" id="pbRatioHidden">
                 
+                <label>💹 Market Cap (কোটি টাকা)</label>
+                <input type="text" id="mcapDisplay" placeholder="Auto" readonly>
+                <input type="hidden" name="market_cap" id="mcapHidden">
+                
                 <label>📈 Upside/Downside (%)</label>
                 <input type="text" id="upsideDisplay" placeholder="Auto" readonly>
                 <input type="hidden" name="upside" id="upsideHidden">
@@ -306,7 +313,7 @@ async def home(request: Request):
             <div style="overflow-x:auto;">
                 <table>
                     <thead>
-                        <tr><th>Sym</th><th>⭐</th><th>Rating</th><th>Grw</th><th>EPS</th><th>DPS</th><th>Pay%</th><th>Div%</th><th>P/E</th><th>PEG</th><th>PEGY</th><th>St</th><th>P/B</th><th>FvPE</th><th>FvPGY</th><th>FvGr</th><th>FvLy</th><th>FvBk</th><th>⭐Avg</th><th>Up%</th><th>Rec</th><th>Act</th></tr>
+                        <tr><th>Sym</th><th>⭐</th><th>Rating</th><th>Grw</th><th>EPS</th><th>DPS</th><th>Pay%</th><th>Div%</th><th>P/E</th><th>PEG</th><th>PEGY</th><th>St</th><th>P/B</th><th>MCap</th><th>FvPE</th><th>FvPGY</th><th>FvGr</th><th>FvLy</th><th>FvBk</th><th>⭐Avg</th><th>Up%</th><th>Rec</th><th>Act</th></tr>
                     </thead>
                     <tbody>{table_rows}</tbody>
                 </table>
@@ -389,6 +396,19 @@ async def home(request: Request):
             }} else {{ cd.value = ''; ch.value = ''; cd.style.color = '#e2e8f0'; }}
         }}
         
+        function convertShares() {{
+            var shares = parseFloat(document.getElementById('totalShares').value) || 0;
+            var unit = document.getElementById('shareUnit').value;
+            var sharesInCr = shares;
+            
+            if (unit === 'lakh') sharesInCr = shares / 100;
+            else if (unit === 'thousand') sharesInCr = shares / 10000;
+            else if (unit === 'unit') sharesInCr = shares / 10000000;
+            
+            document.getElementById('totalSharesHidden').value = sharesInCr;
+            return sharesInCr;
+        }}
+        
         function calcAll() {{
             calcGrowth();
             calcPayout();
@@ -400,6 +420,7 @@ async def home(request: Request):
             var navPs = parseFloat(document.getElementById('navPs').value) || 0;
             var industryPE = parseFloat(document.getElementById('industryPE').value) || 0;
             var bondYield = parseFloat(document.getElementById('bondYield').value) || 12;
+            var sharesInCr = convertShares();
             
             var fvPE = 0, fvPEGY = 0, fvGraham = 0, fvLynch = 0, fvBook = 0;
             var count = 0, total = 0;
@@ -467,6 +488,15 @@ async def home(request: Request):
                 document.getElementById('pbRatioHidden').value = '';
             }}
             
+            if (price > 0 && sharesInCr > 0) {{
+                var mcap = price * sharesInCr;
+                document.getElementById('mcapDisplay').value = '৳' + mcap.toFixed(0) + ' Cr';
+                document.getElementById('mcapHidden').value = mcap.toFixed(2);
+            }} else {{
+                document.getElementById('mcapDisplay').value = '';
+                document.getElementById('mcapHidden').value = '';
+            }}
+            
             if (price > 0 && fvAvg > 0) {{
                 var upside = ((fvAvg - price) / price) * 100;
                 document.getElementById('upsideDisplay').value = upside.toFixed(2) + '%';
@@ -525,6 +555,7 @@ async def submit_form(
     fv_book: float = Form(None),
     fv_average: float = Form(None),
     pb_ratio: float = Form(None),
+    market_cap: float = Form(None),
     upside: float = Form(None),
     recommendation: str = Form(None),
 ):
@@ -561,12 +592,11 @@ async def submit_form(
             "industry_pe": industry_pe, "bond_yield": bond_yield,
             "fv_pe": fv_pe, "fv_pegy": fv_pegy, "fv_graham": fv_graham,
             "fv_lynch": fv_lynch, "fv_book": fv_book, "fv_average": fv_average,
-            "pb_ratio": pb_ratio, "upside": upside,
+            "pb_ratio": pb_ratio, "market_cap": market_cap, "upside": upside,
             "recommendation": recommendation,
             "status": status, "color": color, "created_at": datetime.utcnow(),
         }
         
-        # Calculate Score
         doc["score"] = calculate_score(doc)
         doc["stars"], doc["stars_color"] = get_stars(doc["score"])
         doc["rating"], doc["rating_color"] = get_rating(doc["score"])
@@ -636,6 +666,8 @@ async def edit_page(request: Request, record_id: str):
             <input type="number" step="0.01" name="industry_pe" value="{record.get('industry_pe',0)}">
             <label>Bond Yield (%)</label>
             <input type="number" step="0.01" name="bond_yield" value="{record.get('bond_yield',12)}">
+            <label>Market Cap (Cr)</label>
+            <input type="number" step="0.01" name="market_cap" value="{record.get('market_cap',0)}">
             <label>FV P/E</label>
             <input type="number" step="0.01" name="fv_pe" value="{record.get('fv_pe',0)}">
             <label>FV PEGY</label>
@@ -687,6 +719,7 @@ async def update_record(
     fv_book: float = Form(None),
     fv_average: float = Form(None),
     pb_ratio: float = Form(None),
+    market_cap: float = Form(None),
     upside: float = Form(None),
     recommendation: str = Form(None),
 ):
@@ -716,12 +749,11 @@ async def update_record(
             "industry_pe": industry_pe, "bond_yield": bond_yield,
             "fv_pe": fv_pe, "fv_pegy": fv_pegy, "fv_graham": fv_graham,
             "fv_lynch": fv_lynch, "fv_book": fv_book, "fv_average": fv_average,
-            "pb_ratio": pb_ratio, "upside": upside,
+            "pb_ratio": pb_ratio, "market_cap": market_cap, "upside": upside,
             "recommendation": recommendation,
             "status": status, "color": color,
         }
         
-        # Recalculate Score
         update_doc["score"] = calculate_score(update_doc)
         update_doc["stars"], update_doc["stars_color"] = get_stars(update_doc["score"])
         update_doc["rating"], update_doc["rating_color"] = get_rating(update_doc["score"])
@@ -787,7 +819,7 @@ async def manifest(): return FileResponse("static/manifest.json")
 
 @app.get("/static/sw.js")
 async def service_worker():
-    return HTMLResponse(content="""const CACHE_NAME='pegy-v15';self.addEventListener('install',(e)=>{e.waitUntil(caches.open(CACHE_NAME).then((c)=>c.addAll(['/','/static/manifest.json'])));self.skipWaiting();});self.addEventListener('activate',(e)=>{e.waitUntil(clients.claim());});self.addEventListener('fetch',(e)=>{e.respondWith(caches.match(e.request).then((r)=>r||fetch(e.request)));});""", media_type="application/javascript")
+    return HTMLResponse(content="""const CACHE_NAME='pegy-v16';self.addEventListener('install',(e)=>{e.waitUntil(caches.open(CACHE_NAME).then((c)=>c.addAll(['/','/static/manifest.json'])));self.skipWaiting();});self.addEventListener('activate',(e)=>{e.waitUntil(clients.claim());});self.addEventListener('fetch',(e)=>{e.respondWith(caches.match(e.request).then((r)=>r||fetch(e.request)));});""", media_type="application/javascript")
 
 # ===================== RUN =====================
 if __name__ == "__main__":
