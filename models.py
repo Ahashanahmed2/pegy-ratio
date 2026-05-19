@@ -9,3 +9,7 @@ class PEGYInput(BaseModel):
     dividend_yield: float = Field(..., ge=0, description="Dividend Yield (%)")
     eps_growth: Optional[float] = Field(None, description="EPS Growth Rate 3Yr (%)")
     current_price: float = Field(..., gt=0, description="Current Stock Price (টাকায়)")
+    dps: Optional[float] = Field(None, description="Dividend Per Share (টাকায়)")
+    dps_old: Optional[float] = Field(None, description="Old DPS 3 Years Ago (টাকায়)")
+    payout_ratio: Optional[float] = Field(None, description="Payout Ratio (%)")
+    payout_cagr: Optional[float] = Field(None, description="Payout CAGR 3Yr (%)")
