@@ -13,3 +13,9 @@ class PEGYInput(BaseModel):
     dps_old: Optional[float] = Field(None, description="Old DPS 3 Years Ago (টাকায়)")
     payout_ratio: Optional[float] = Field(None, description="Payout Ratio (%)")
     payout_cagr: Optional[float] = Field(None, description="Payout CAGR 3Yr (%)")
+    
+    # Valuation Fields
+    nav_ps: Optional[float] = Field(None, description="NAV Per Share (টাকায়)")
+    total_shares: Optional[float] = Field(None, description="Total Shares (কোটি)")
+    industry_pe: Optional[float] = Field(None, description="Industry P/E Ratio")
+    bond_yield: Optional[float] = Field(None, description="Bond Yield (%)")
