@@ -90,9 +90,7 @@ async def home(request: Request):
             pegy_val = f"{r['pegy_ratio']:.2f}" if r.get('pegy_ratio') is not None else '-'
             pb_val = f"{r.get('pb_ratio', 0):.2f}" if r.get('pb_ratio') is not None else '-'
             mcap_val = f"৳{r.get('market_cap', 0):.0f}Cr" if r.get('market_cap') is not None else '-'
-            fv_pe = f"{r.get('fv_pe', 0):.2f}" if r.get('fv_pe') is not None else '-'
             fv_pegy = f"{r.get('fv_pegy', 0):.2f}" if r.get('fv_pegy') is not None else '-'
-            fv_graham = f"{r.get('fv_graham', 0):.2f}" if r.get('fv_graham') is not None else '-'
             fv_lynch = f"{r.get('fv_lynch', 0):.2f}" if r.get('fv_lynch') is not None else '-'
             fv_book = f"{r.get('fv_book', 0):.2f}" if r.get('fv_book') is not None else '-'
             fv_avg = f"{r.get('fv_average', 0):.2f}" if r.get('fv_average') is not None else '-'
@@ -130,9 +128,7 @@ async def home(request: Request):
                 <td><span style="background:{color};color:white;padding:3px 8px;border-radius:10px;font-size:9px;">{status}</span></td>
                 <td>{pb_val}</td>
                 <td>{mcap_val}</td>
-                <td>{fv_pe}</td>
                 <td>{fv_pegy}</td>
-                <td>{fv_graham}</td>
                 <td>{fv_lynch}</td>
                 <td>{fv_book}</td>
                 <td><b style="color:#f59e0b;">{fv_avg}</b></td>
@@ -144,7 +140,7 @@ async def home(request: Request):
                 </td>
             </tr>"""
     else:
-        table_rows = '<tr><td colspan="23" style="text-align:center;color:#94a3b8;padding:30px;">No records yet</td></tr>'
+        table_rows = '<tr><td colspan="21" style="text-align:center;color:#94a3b8;padding:30px;">No records yet</td></tr>'
     
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -255,32 +251,18 @@ async def home(request: Request):
                 </div>
                 <input type="hidden" name="total_shares" id="totalSharesHidden">
                 
-                <label>📈 Industry P/E</label>
-                <input type="number" step="0.01" name="industry_pe" id="industryPE" placeholder="12" oninput="calcAll()">
-                
-                <label>🏦 Bond Yield (%)</label>
-                <input type="number" step="0.01" name="bond_yield" id="bondYield" placeholder="12" value="12" oninput="calcAll()">
-                
                 <hr>
                 <h4>📊 Fair Value Outputs</h4>
                 
-                <label>1️⃣ P/E Fair Value</label>
-                <input type="text" id="fvPEDisplay" placeholder="Auto" readonly>
-                <input type="hidden" name="fv_pe" id="fvPEHidden">
-                
-                <label>2️⃣ PEGY Fair Value</label>
+                <label>1️⃣ PEGY Fair Value</label>
                 <input type="text" id="fvPEGYDisplay" placeholder="Auto" readonly>
                 <input type="hidden" name="fv_pegy" id="fvPEGYHidden">
                 
-                <label>3️⃣ Graham Fair Value</label>
-                <input type="text" id="fvGrahamDisplay" placeholder="Auto" readonly>
-                <input type="hidden" name="fv_graham" id="fvGrahamHidden">
-                
-                <label>4️⃣ Peter Lynch Fair Value</label>
+                <label>2️⃣ Peter Lynch Fair Value</label>
                 <input type="text" id="fvLynchDisplay" placeholder="Auto" readonly>
                 <input type="hidden" name="fv_lynch" id="fvLynchHidden">
                 
-                <label>5️⃣ Book Value (NAV)</label>
+                <label>3️⃣ Book Value (NAV)</label>
                 <input type="text" id="fvBookDisplay" placeholder="Auto" readonly>
                 <input type="hidden" name="fv_book" id="fvBookHidden">
                 
@@ -313,7 +295,7 @@ async def home(request: Request):
             <div style="overflow-x:auto;">
                 <table>
                     <thead>
-                        <tr><th>Sym</th><th>⭐</th><th>Rating</th><th>Grw</th><th>EPS</th><th>DPS</th><th>Pay%</th><th>Div%</th><th>P/E</th><th>PEG</th><th>PEGY</th><th>St</th><th>P/B</th><th>MCap</th><th>FvPE</th><th>FvPGY</th><th>FvGr</th><th>FvLy</th><th>FvBk</th><th>⭐Avg</th><th>Up%</th><th>Rec</th><th>Act</th></tr>
+                        <tr><th>Sym</th><th>⭐</th><th>Rating</th><th>Grw</th><th>EPS</th><th>DPS</th><th>Pay%</th><th>Div%</th><th>P/E</th><th>PEG</th><th>PEGY</th><th>St</th><th>P/B</th><th>MCap</th><th>FvPGY</th><th>FvLy</th><th>FvBk</th><th>⭐Avg</th><th>Up%</th><th>Rec</th><th>Act</th></tr>
                     </thead>
                     <tbody>{table_rows}</tbody>
                 </table>
@@ -418,23 +400,12 @@ async def home(request: Request):
             var growth = parseFloat(document.getElementById('epsGrowthHidden').value) || 0;
             var divYield = parseFloat(document.getElementById('dividendYield').value) || 0;
             var navPs = parseFloat(document.getElementById('navPs').value) || 0;
-            var industryPE = parseFloat(document.getElementById('industryPE').value) || 0;
-            var bondYield = parseFloat(document.getElementById('bondYield').value) || 12;
             var sharesInCr = convertShares();
             
-            var fvPE = 0, fvPEGY = 0, fvGraham = 0, fvLynch = 0, fvBook = 0;
+            var fvPEGY = 0, fvLynch = 0, fvBook = 0;
             var count = 0, total = 0;
             
-            if (eps > 0 && industryPE > 0) {{
-                fvPE = eps * industryPE;
-                document.getElementById('fvPEDisplay').value = fvPE.toFixed(2);
-                document.getElementById('fvPEHidden').value = fvPE.toFixed(2);
-                count++; total += fvPE;
-            }} else {{
-                document.getElementById('fvPEDisplay').value = '';
-                document.getElementById('fvPEHidden').value = '';
-            }}
-            
+            // 1. PEGY Fair Value
             if (eps > 0 && growth > 0 && divYield > 0) {{
                 fvPEGY = eps * (growth + divYield);
                 document.getElementById('fvPEGYDisplay').value = fvPEGY.toFixed(2);
@@ -445,16 +416,7 @@ async def home(request: Request):
                 document.getElementById('fvPEGYHidden').value = '';
             }}
             
-            if (eps > 0 && growth > 0 && bondYield > 0) {{
-                fvGraham = eps * (8.5 + 2 * growth) * 4.4 / bondYield;
-                document.getElementById('fvGrahamDisplay').value = fvGraham.toFixed(2);
-                document.getElementById('fvGrahamHidden').value = fvGraham.toFixed(2);
-                count++; total += fvGraham;
-            }} else {{
-                document.getElementById('fvGrahamDisplay').value = '';
-                document.getElementById('fvGrahamHidden').value = '';
-            }}
-            
+            // 2. Peter Lynch Fair Value
             if (eps > 0 && growth > 0) {{
                 fvLynch = eps * growth;
                 document.getElementById('fvLynchDisplay').value = fvLynch.toFixed(2);
@@ -465,6 +427,7 @@ async def home(request: Request):
                 document.getElementById('fvLynchHidden').value = '';
             }}
             
+            // 3. Book Value (NAV)
             if (navPs > 0) {{
                 fvBook = navPs;
                 document.getElementById('fvBookDisplay').value = fvBook.toFixed(2);
@@ -475,10 +438,12 @@ async def home(request: Request):
                 document.getElementById('fvBookHidden').value = '';
             }}
             
+            // Average Fair Value
             var fvAvg = count > 0 ? total / count : 0;
             document.getElementById('fvAvgDisplay').value = fvAvg > 0 ? fvAvg.toFixed(2) : '';
             document.getElementById('fvAvgHidden').value = fvAvg > 0 ? fvAvg.toFixed(2) : '';
             
+            // P/B Ratio
             if (price > 0 && navPs > 0) {{
                 var pb = price / navPs;
                 document.getElementById('pbRatioDisplay').value = pb.toFixed(2);
@@ -488,6 +453,7 @@ async def home(request: Request):
                 document.getElementById('pbRatioHidden').value = '';
             }}
             
+            // Market Cap
             if (price > 0 && sharesInCr > 0) {{
                 var mcap = price * sharesInCr;
                 document.getElementById('mcapDisplay').value = '৳' + mcap.toFixed(0) + ' Cr';
@@ -497,6 +463,7 @@ async def home(request: Request):
                 document.getElementById('mcapHidden').value = '';
             }}
             
+            // Upside/Downside
             if (price > 0 && fvAvg > 0) {{
                 var upside = ((fvAvg - price) / price) * 100;
                 document.getElementById('upsideDisplay').value = upside.toFixed(2) + '%';
@@ -546,11 +513,7 @@ async def submit_form(
     current_price: float = Form(...),
     nav_ps: float = Form(None),
     total_shares: float = Form(None),
-    industry_pe: float = Form(None),
-    bond_yield: float = Form(None),
-    fv_pe: float = Form(None),
     fv_pegy: float = Form(None),
-    fv_graham: float = Form(None),
     fv_lynch: float = Form(None),
     fv_book: float = Form(None),
     fv_average: float = Form(None),
@@ -589,10 +552,9 @@ async def submit_form(
             "current_price": current_price, "pe_ratio": pe_ratio,
             "peg_ratio": peg_ratio, "pegy_ratio": pegy_ratio,
             "nav_ps": nav_ps, "total_shares": total_shares,
-            "industry_pe": industry_pe, "bond_yield": bond_yield,
-            "fv_pe": fv_pe, "fv_pegy": fv_pegy, "fv_graham": fv_graham,
-            "fv_lynch": fv_lynch, "fv_book": fv_book, "fv_average": fv_average,
-            "pb_ratio": pb_ratio, "market_cap": market_cap, "upside": upside,
+            "fv_pegy": fv_pegy, "fv_lynch": fv_lynch, "fv_book": fv_book,
+            "fv_average": fv_average, "pb_ratio": pb_ratio,
+            "market_cap": market_cap, "upside": upside,
             "recommendation": recommendation,
             "status": status, "color": color, "created_at": datetime.utcnow(),
         }
@@ -662,18 +624,10 @@ async def edit_page(request: Request, record_id: str):
             <input type="number" step="0.01" name="nav_ps" value="{record.get('nav_ps',0)}">
             <label>Total Shares (Crore)</label>
             <input type="number" step="0.01" name="total_shares" value="{record.get('total_shares',0)}">
-            <label>Industry P/E</label>
-            <input type="number" step="0.01" name="industry_pe" value="{record.get('industry_pe',0)}">
-            <label>Bond Yield (%)</label>
-            <input type="number" step="0.01" name="bond_yield" value="{record.get('bond_yield',12)}">
             <label>Market Cap (Cr)</label>
             <input type="number" step="0.01" name="market_cap" value="{record.get('market_cap',0)}">
-            <label>FV P/E</label>
-            <input type="number" step="0.01" name="fv_pe" value="{record.get('fv_pe',0)}">
             <label>FV PEGY</label>
             <input type="number" step="0.01" name="fv_pegy" value="{record.get('fv_pegy',0)}">
-            <label>FV Graham</label>
-            <input type="number" step="0.01" name="fv_graham" value="{record.get('fv_graham',0)}">
             <label>FV Lynch</label>
             <input type="number" step="0.01" name="fv_lynch" value="{record.get('fv_lynch',0)}">
             <label>FV Book</label>
@@ -710,11 +664,7 @@ async def update_record(
     current_price: float = Form(...),
     nav_ps: float = Form(None),
     total_shares: float = Form(None),
-    industry_pe: float = Form(None),
-    bond_yield: float = Form(None),
-    fv_pe: float = Form(None),
     fv_pegy: float = Form(None),
-    fv_graham: float = Form(None),
     fv_lynch: float = Form(None),
     fv_book: float = Form(None),
     fv_average: float = Form(None),
@@ -746,10 +696,9 @@ async def update_record(
             "dividend_yield": dividend_yield, "current_price": current_price,
             "pe_ratio": pe_ratio, "peg_ratio": peg_ratio, "pegy_ratio": pegy_ratio,
             "nav_ps": nav_ps, "total_shares": total_shares,
-            "industry_pe": industry_pe, "bond_yield": bond_yield,
-            "fv_pe": fv_pe, "fv_pegy": fv_pegy, "fv_graham": fv_graham,
-            "fv_lynch": fv_lynch, "fv_book": fv_book, "fv_average": fv_average,
-            "pb_ratio": pb_ratio, "market_cap": market_cap, "upside": upside,
+            "fv_pegy": fv_pegy, "fv_lynch": fv_lynch, "fv_book": fv_book,
+            "fv_average": fv_average, "pb_ratio": pb_ratio,
+            "market_cap": market_cap, "upside": upside,
             "recommendation": recommendation,
             "status": status, "color": color,
         }
@@ -819,7 +768,7 @@ async def manifest(): return FileResponse("static/manifest.json")
 
 @app.get("/static/sw.js")
 async def service_worker():
-    return HTMLResponse(content="""const CACHE_NAME='pegy-v16';self.addEventListener('install',(e)=>{e.waitUntil(caches.open(CACHE_NAME).then((c)=>c.addAll(['/','/static/manifest.json'])));self.skipWaiting();});self.addEventListener('activate',(e)=>{e.waitUntil(clients.claim());});self.addEventListener('fetch',(e)=>{e.respondWith(caches.match(e.request).then((r)=>r||fetch(e.request)));});""", media_type="application/javascript")
+    return HTMLResponse(content="""const CACHE_NAME='pegy-v17';self.addEventListener('install',(e)=>{e.waitUntil(caches.open(CACHE_NAME).then((c)=>c.addAll(['/','/static/manifest.json'])));self.skipWaiting();});self.addEventListener('activate',(e)=>{e.waitUntil(clients.claim());});self.addEventListener('fetch',(e)=>{e.respondWith(caches.match(e.request).then((r)=>r||fetch(e.request)));});""", media_type="application/javascript")
 
 # ===================== RUN =====================
 if __name__ == "__main__":
