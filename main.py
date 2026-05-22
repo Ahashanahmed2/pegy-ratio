@@ -49,6 +49,17 @@ def calculate_score(r):
         if pb < 1: score += 15
         elif pb < 2: score += 10
         elif pb < 3: score += 5
+    
+    # ✅ স্টক ডিভিডেন্ড বোনাস (নতুন)
+    stock_div = r.get('stock_dividend', 0)
+    if stock_div and stock_div > 0:
+        if stock_div >= 10:
+            score += 15
+        elif stock_div >= 5:
+            score += 10
+        else:
+            score += 5
+    
     return score
 
 def get_stars(score):
@@ -239,6 +250,11 @@ async def home(request: Request):
                 <label>📖 NAV Per Share (টাকা)</label>
                 <input type="number" step="0.01" name="nav_ps" id="navPs" placeholder="41.67" oninput="calcAll()">
                 
+                <label>🎁 Stock Dividend (%)</label>
+                <input type="number" step="0.01" id="stockDividend" placeholder="10" oninput="calcAll()">
+                <span class="info-text">স্টক ডিভিডেন্ড থাকলে % দিন (যেমন: 10)</span>
+                <input type="hidden" name="stock_dividend" id="stockDividendHidden">
+                
                 <label>📊 Total Shares</label>
                 <div class="flex-row">
                     <input type="number" step="0.01" id="totalShares" placeholder="1200" oninput="calcAll()" class="flex-2">
@@ -305,6 +321,7 @@ async def home(request: Request):
 
     <script>
         var FACE_VALUE = 10;
+        var SAFETY_DISCOUNT = 0.70;  // 30% রক্ষণশীল ডিসকাউন্ট
         
         function calcDPS() {{
             var dp = parseFloat(document.getElementById('dividendPercent').value);
@@ -400,14 +417,20 @@ async def home(request: Request):
             var growth = parseFloat(document.getElementById('epsGrowthHidden').value) || 0;
             var divYield = parseFloat(document.getElementById('dividendYield').value) || 0;
             var navPs = parseFloat(document.getElementById('navPs').value) || 0;
+            var stockDiv = parseFloat(document.getElementById('stockDividend').value) || 0;
             var sharesInCr = convertShares();
+            
+            document.getElementById('stockDividendHidden').value = stockDiv;
             
             var fvPEGY = 0, fvLynch = 0, fvBook = 0;
             var count = 0, total = 0;
             
-            // 1. PEGY Fair Value
+            // স্টক ডিভিডেন্ড বোনাস ফ্যাক্টর: 1% স্টক Div = +0.5% ফেয়ার ভ্যালু
+            var bonusFactor = 1 + (stockDiv / 100) * 0.5;
+            
+            // 1️⃣ PEGY Fair Value (রক্ষণশীল: 30% ডিসকাউন্ট + স্টক ডিভিডেন্ড বোনাস)
             if (eps > 0 && growth > 0 && divYield > 0) {{
-                fvPEGY = eps * (growth + divYield);
+                fvPEGY = eps * (growth + divYield) * SAFETY_DISCOUNT * bonusFactor;
                 document.getElementById('fvPEGYDisplay').value = fvPEGY.toFixed(2);
                 document.getElementById('fvPEGYHidden').value = fvPEGY.toFixed(2);
                 count++; total += fvPEGY;
@@ -416,9 +439,9 @@ async def home(request: Request):
                 document.getElementById('fvPEGYHidden').value = '';
             }}
             
-            // 2. Peter Lynch Fair Value
+            // 2️⃣ Peter Lynch Fair Value (রক্ষণশীল: 30% ডিসকাউন্ট + স্টক ডিভিডেন্ড বোনাস)
             if (eps > 0 && growth > 0) {{
-                fvLynch = eps * growth;
+                fvLynch = eps * growth * SAFETY_DISCOUNT * bonusFactor;
                 document.getElementById('fvLynchDisplay').value = fvLynch.toFixed(2);
                 document.getElementById('fvLynchHidden').value = fvLynch.toFixed(2);
                 count++; total += fvLynch;
@@ -427,9 +450,9 @@ async def home(request: Request):
                 document.getElementById('fvLynchHidden').value = '';
             }}
             
-            // 3. Book Value (NAV)
+            // 3️⃣ Book Value (NAV) (স্টক ডিভিডেন্ড বোনাস যোগ)
             if (navPs > 0) {{
-                fvBook = navPs;
+                fvBook = navPs * bonusFactor;
                 document.getElementById('fvBookDisplay').value = fvBook.toFixed(2);
                 document.getElementById('fvBookHidden').value = fvBook.toFixed(2);
                 count++; total += fvBook;
@@ -521,6 +544,7 @@ async def submit_form(
     market_cap: float = Form(None),
     upside: float = Form(None),
     recommendation: str = Form(None),
+    stock_dividend: float = Form(None),
 ):
     try:
         pe_ratio = round(current_price / eps, 2)
@@ -556,6 +580,7 @@ async def submit_form(
             "fv_average": fv_average, "pb_ratio": pb_ratio,
             "market_cap": market_cap, "upside": upside,
             "recommendation": recommendation,
+            "stock_dividend": stock_dividend,
             "status": status, "color": color, "created_at": datetime.utcnow(),
         }
         
@@ -618,6 +643,8 @@ async def edit_page(request: Request, record_id: str):
             <input type="number" step="0.01" name="dividend_yield" value="{record.get('dividend_yield',0)}">
             <label>Current Price</label>
             <input type="number" step="0.01" name="current_price" value="{record.get('current_price',0)}">
+            <label>Stock Dividend (%)</label>
+            <input type="number" step="0.01" name="stock_dividend" value="{record.get('stock_dividend',0)}">
             <hr>
             <h4>Valuation</h4>
             <label>NAV Per Share</label>
@@ -672,6 +699,7 @@ async def update_record(
     market_cap: float = Form(None),
     upside: float = Form(None),
     recommendation: str = Form(None),
+    stock_dividend: float = Form(None),
 ):
     try:
         obj_id = ObjectId(record_id)
@@ -700,6 +728,7 @@ async def update_record(
             "fv_average": fv_average, "pb_ratio": pb_ratio,
             "market_cap": market_cap, "upside": upside,
             "recommendation": recommendation,
+            "stock_dividend": stock_dividend,
             "status": status, "color": color,
         }
         
@@ -743,15 +772,22 @@ async def calculate_pegy(data: PEGYInput):
             elif pegy_ratio < 3: status, color = "Average", "#f39c12"
             else: status, color = "Poor", "#e74c3c"
         else: status, color = "N/A", "#95a5a6"
-        result = await pegy_collection.insert_one({
+        
+        doc = {
             "symbol": data.symbol.upper(), "eps": data.eps, "eps_old": data.eps_old,
             "eps_period": data.eps_period, "dividend_yield": data.dividend_yield,
             "eps_growth": data.eps_growth, "current_price": data.current_price,
             "dps": data.dps, "dps_old": data.dps_old,
             "payout_ratio": data.payout_ratio, "payout_cagr": data.payout_cagr,
+            "stock_dividend": getattr(data, 'stock_dividend', None),
             "pe_ratio": pe_ratio, "peg_ratio": peg_ratio, "pegy_ratio": pegy_ratio,
             "status": status, "color": color, "created_at": datetime.utcnow(),
-        })
+        }
+        doc["score"] = calculate_score(doc)
+        doc["stars"], doc["stars_color"] = get_stars(doc["score"])
+        doc["rating"], doc["rating_color"] = get_rating(doc["score"])
+        
+        result = await pegy_collection.insert_one(doc)
         return {"id": str(result.inserted_id), "pegy_ratio": pegy_ratio, "status": status, "color": color}
     except Exception as e:
         raise HTTPException(500, f"Error: {str(e)}")
@@ -768,7 +804,7 @@ async def manifest(): return FileResponse("static/manifest.json")
 
 @app.get("/static/sw.js")
 async def service_worker():
-    return HTMLResponse(content="""const CACHE_NAME='pegy-v17';self.addEventListener('install',(e)=>{e.waitUntil(caches.open(CACHE_NAME).then((c)=>c.addAll(['/','/static/manifest.json'])));self.skipWaiting();});self.addEventListener('activate',(e)=>{e.waitUntil(clients.claim());});self.addEventListener('fetch',(e)=>{e.respondWith(caches.match(e.request).then((r)=>r||fetch(e.request)));});""", media_type="application/javascript")
+    return HTMLResponse(content="""const CACHE_NAME='pegy-v18';self.addEventListener('install',(e)=>{e.waitUntil(caches.open(CACHE_NAME).then((c)=>c.addAll(['/','/static/manifest.json'])));self.skipWaiting();});self.addEventListener('activate',(e)=>{e.waitUntil(clients.claim());});self.addEventListener('fetch',(e)=>{e.respondWith(caches.match(e.request).then((r)=>r||fetch(e.request)));});""", media_type="application/javascript")
 
 # ===================== RUN =====================
 if __name__ == "__main__":
