@@ -14,6 +14,9 @@ class PEGYInput(BaseModel):
     payout_ratio: Optional[float] = Field(None, description="Payout Ratio (%)")
     payout_cagr: Optional[float] = Field(None, description="Payout CAGR 3Yr (%)")
     
+    # ✅ নতুন: স্টক ডিভিডেন্ড ফিল্ড
+    stock_dividend: Optional[float] = Field(None, description="Stock Dividend (%) - যেমন: 10 মানে 10% বোনাস শেয়ার")
+
     # Valuation Fields
     nav_ps: Optional[float] = Field(None, description="NAV Per Share (টাকায়)")
     total_shares: Optional[float] = Field(None, description="Total Shares (কোটি)")
